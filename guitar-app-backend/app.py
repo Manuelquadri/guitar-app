@@ -1,4 +1,5 @@
 # app.py
+import os
 from flask import Flask, jsonify, request # ¡Añade 'request'!
 from flask_cors import CORS
 from models import db, Song
@@ -7,7 +8,7 @@ from scraper import scrape_and_save_song
 app = Flask(__name__)
 
 # Configuración
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///database.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # Inicialización

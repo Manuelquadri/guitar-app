@@ -19,7 +19,7 @@ function AddSongForm({ onSongAdded }) {
     setSuccess('');
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/scrape`, {
+      const response = await fetch('https://guitar-app-backend.onrender.com/api/scrape', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

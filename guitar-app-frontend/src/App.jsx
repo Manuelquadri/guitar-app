@@ -18,7 +18,7 @@ function App() {
     // Definimos la función para cargar las canciones desde la API
     async function fetchSongs() {
       try {
-        const response = await fetch('${import.meta.env.VITE_API_URL}/api/songs');
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/songs`);
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }

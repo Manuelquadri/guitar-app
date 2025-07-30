@@ -45,6 +45,32 @@ def scrape_song_endpoint():
     else:
         # 500 Internal Server Error, o podrías ser más específico
         return jsonify({"error": "No se pudo scrapear o guardar la canción"}), 500
+
+@app.route('/api/songs/<int:song_id>', methods=['PUT'])
+def update_song(song_id):
+    # Busca la canción en la base de datos
+    song = Song.query.get(song_id)
+    if not song:
+        return jsonify({"error": "Canción no encontrada"}), 404
+
+    # Obtiene los nuevos datos del cuerpo de la petición
+    data = request.get_json()
+    if not data or 'content' not in data:
+        return jsonify({"error": "El contenido es requerido"}), 400
+
+    # Actualiza el campo de contenido del objeto de la canción
+    song.content = data['content']
+    
+    # Actualizamos la transposición si se proporciona
+    if 'transposition' in data:
+        song.transposition = data['transposition']
+
+    # Guarda los cambios en la base de datos
+    db.session.commit()
+
+    # Devuelve la canción actualizada
+    return jsonify(song.to_dict()), 200
+
 # --- Comando para inicializar la BD ---
 @app.cli.command('init-db')
 def init_db_command():

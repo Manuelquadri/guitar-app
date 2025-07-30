@@ -66,8 +66,16 @@ function App() {
     const uniqueArtists = [...new Set(songs.map((song) => song.artist))];
     return uniqueArtists.sort(); // Opcional: ordenar alfabéticamente
   }, [songs]);
+  // FUNCIÓN PARA ACTUALIZAR UNA CANCIÓN EN LA LISTA
+  const handleSongUpdated = (updatedSong) => {
+      // Reemplazamos la canción vieja por la nueva en nuestro array de estado
+      setSongs(prevSongs => 
+        prevSongs.map(s => (s.id === updatedSong.id ? updatedSong : s))
+      );
+      // También actualizamos la canción seleccionada para que la vista se refresque
+      setSelectedSong(updatedSong);
+    };
 
- 
   // Función para manejar la selección de una canción
   const handleSelectSong = (song) => {
     setSelectedSong(song);
@@ -105,7 +113,12 @@ function App() {
             <SongList songs={filteredSongs} onSelectSong={handleSelectSong} />
           </>
         ) : (
-          <SongView song={selectedSong} onBack={handleBackToList} />
+          // ¡Pasamos la nueva función como prop a SongView!
+          <SongView 
+            song={selectedSong} 
+            onBack={handleBackToList} 
+            onSongUpdated={handleSongUpdated} 
+          />
         )}
       </main>
     </div>

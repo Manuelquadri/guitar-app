@@ -4,6 +4,7 @@ from flask import Flask, jsonify, request # ¡Añade 'request'!
 from flask_cors import CORS
 from models import db, Song
 from scraper import scrape_and_save_song 
+from flask_migrate import Migrate
 
 app = Flask(__name__)
 
@@ -13,6 +14,7 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # Inicialización
 db.init_app(app)
+migrate = Migrate(app, db) 
 CORS(app) # Habilita CORS para todas las rutas
 
 # --- Rutas de la API ---

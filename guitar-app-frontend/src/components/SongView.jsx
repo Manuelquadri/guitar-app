@@ -42,7 +42,7 @@ function SongView({ song, onBack, onSongUpdated }) {
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/songs/${song.id}`, {
+      const response = await authFetch(`${import.meta.env.VITE_API_URL}/api/songs/${song.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ content: editedContent, transposition: transposition }),

@@ -338,3 +338,62 @@ header {
   min-height: 200px;
   /* Le damos una altura mínima */
 }
+.auth-page {
+  max-width: 400px;
+  margin: 5rem auto;
+  padding: 2rem;
+  background-color: #2c2c2c;
+  border-radius: 8px;
+}
+
+.auth-page h2 {
+  text-align: center;
+}
+
+.auth-page form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.auth-page input {
+    flex-grow: 1;
+    padding: 0.5rem;
+    border-radius: 5px;
+    border: 1px solid #555;
+    background-color: #333;
+    color: white;
+}
+
+.auth-page button {
+
+}
+
+.auth-page p {
+  text-align: center;
+  margin-top: 1rem;
+}
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 2rem;
+  background-color: #1a1a1a;
+}
+
+.navbar-brand {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: white;
+  text-decoration: none;
+}
+
+.navbar-links {
+  display: flex;
+  gap: 1rem;
+}
+
+.nav-link,
+.nav-button {
+  /* ... estilos para tus botones/links ... */
+}

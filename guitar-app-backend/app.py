@@ -4,49 +4,83 @@ from flask import Flask, jsonify, request
 from flask_cors import CORS
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity, JWTManager
 from models import db, User, Song, UserSong
-from werkzeug.security import check_password_hash
+from scraper import scrape_and_save_song # Asegúrate de que esta importación sea correcta
 from dotenv import load_dotenv
 from flask_migrate import Migrate
-from flask import Blueprint # 1. Importa Blueprint
 
 # Cargar variables de entorno del archivo .env
 load_dotenv()
 # --- Creación del Blueprint ---
 # Todas nuestras rutas de la API vivirán aquí
-api_bp = Blueprint('api', __name__, url_prefix='/api')
+
+app = Flask(__name__)
+
+# Configuración
+frontend_url = os.environ.get('FRONTEND_URL', 'http://localhost:3000')
+CORS(app, origins=[frontend_url], methods=["GET", "POST", "PUT"], allow_headers=["Content-Type", "Authorization"], supports_credentials=True)
+
+# --- CONFIGURACIÓN DE CORS MEJORADA Y ROBUSTA ---
+frontend_url = os.environ.get('FRONTEND_URL', 'http://localhost:3000')
+
+CORS(
+    app,
+    # Permite peticiones solo desde la URL de tu frontend.
+    origins=[frontend_url], 
+    # Define los métodos HTTP que tu API aceptará.
+    methods=["GET", "POST", "PUT", "DELETE"], 
+    # Define las cabeceras que el frontend puede enviar (importante para JWT).
+    allow_headers=["Content-Type", "Authorization"],
+    # Permite que el navegador envíe cookies y cabeceras de autorización.
+    supports_credentials=True 
+)
+
+# Inicialización
+db.init_app(app)
+migrate = Migrate(app, db) 
+jwt = JWTManager(app)
+
 
 # --- Rutas de la API ---
-# --- Rutas de Autenticación (ahora usan @api_bp.route) ---
-@api_bp.route('/register', methods=['POST'])
+@app.route('/api/register', methods=['POST'])
 def register():
     data = request.get_json()
-    username, password = data.get('username'), data.get('password')
-    if not all([username, password]): return jsonify({"msg": "Username and password required"}), 400
-    if User.query.filter_by(username=username).first(): return jsonify({"msg": "Username exists"}), 409
+    username = data.get('username')
+    password = data.get('password')
+
+    if not username or not password:
+        return jsonify({"msg": "Username and password are required"}), 400
+
+    if User.query.filter_by(username=username).first():
+        return jsonify({"msg": "Username already exists"}), 409
+
     new_user = User(username=username)
     new_user.set_password(password)
     db.session.add(new_user)
     db.session.commit()
+
     return jsonify(new_user.to_dict()), 201
 
-
-@api_bp.route('/login', methods=['POST'])
+@app.route('/api/login', methods=['POST'])
 def login():
     data = request.get_json()
-    username, password = data.get('username'), data.get('password')
+    username = data.get('username')
+    password = data.get('password')
+    
     user = User.query.filter_by(username=username).first()
+
     if user and user.check_password(password):
         access_token = create_access_token(identity=user.id)
         return jsonify(access_token=access_token)
+
     return jsonify({"msg": "Bad username or password"}), 401
 
-@api_bp.route('/api/songs', methods=['GET'])
+@app.route('/api/songs', methods=['GET'])
 def get_songs():
     """Devuelve la lista de canciones maestras. Es pública."""
     songs = Song.query.all()
     return jsonify([song.to_dict() for song in songs])
 
-@api_bp.route('/api/songs/<int:song_id>', methods=['GET'])
+@app.route('/api/songs/<int:song_id>', methods=['GET'])
 
 @jwt_required(optional=True) # La autenticación es opcional aquí
 
@@ -86,7 +120,7 @@ def get_song(song_id):
 
 # --- Proteger y Mejorar la Ruta para Guardar Cambios ---
 
-@api_bp.route('/api/songs/<int:song_id>', methods=['PUT'])
+@app.route('/api/songs/<int:song_id>', methods=['PUT'])
 @jwt_required() # ¡Ahora es obligatorio estar logueado para guardar!
 def update_song(song_id):
     """Crea o actualiza la versión personalizada de una canción para el usuario actual."""
@@ -117,7 +151,7 @@ def update_song(song_id):
     # Devolvemos la canción completa y fusionada, tal como lo hace get_song
     return get_song(song_id)
 
-@api_bp.route('/api/scrape', methods=['POST'])
+@app.route('/api/scrape', methods=['POST'])
 @jwt_required()
 def scrape_song_endpoint():
     data = request.get_json()
@@ -137,29 +171,13 @@ def scrape_song_endpoint():
         return jsonify({"error": "No se pudo scrapear o guardar la canción"}), 500
 
 
-def create_app():
-    app = Flask(__name__)
-    
-    app.config.from_mapping(
-        SQLALCHEMY_DATABASE_URI=os.environ.get('DATABASE_URL', 'sqlite:///database.db'),
-        SQLALCHEMY_TRACK_MODIFICATIONS=False,
-        JWT_SECRET_KEY=os.environ.get('JWT_SECRET_KEY')
-    )
 
-    db.init_app(app)
-    Migrate(app, db) # Inicializa Migrate aquí
-    JWTManager(app)
-
-    frontend_url = os.environ.get('FRONTEND_URL', 'http://localhost:3000')
-    CORS(app, origins=[frontend_url], methods=["GET", "POST", "PUT"], allow_headers=["Content-Type", "Authorization"], supports_credentials=True)
-
-    app.register_blueprint(api_bp) # Registra el blueprint
-
-    return app
-
-# 4. Crea la instancia de la app para que Gunicorn la encuentre
-app = create_app()
+# --- Comando para inicializar la BD ---
+@app.cli.command('init-db')
+def init_db_command():
+    """Crea las tablas de la base de datos."""
+    db.create_all()
+    print('Initialized the database.')
 
 if __name__ == '__main__':
     app.run(debug=True)
-    

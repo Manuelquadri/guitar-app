@@ -90,27 +90,24 @@ def update_song(song_id):
 @api_bp.route('/scrape', methods=['POST'])
 @jwt_required()
 def scrape_song_endpoint():
-    logging.basicConfig(level=logging.INFO)
-    logging.info("--- Scrape request received ---")
-    
-    # ¡LA VERSIÓN CORRECTA! Espera un cuerpo JSON.
     try:
         data = request.get_json()
-        logging.info(f"Request JSON data received: {data}")
-    except Exception as e:
-        logging.error(f"Could not parse JSON. Error: {e}")
-        return jsonify({"error": "Request body must be a valid JSON."}), 400
+        url = data.get('url')
+        if not url:
+            return jsonify({"error": "La clave 'url' es requerida en el JSON"}), 400
+    except Exception:
+        return jsonify({"error": "El cuerpo de la petición debe ser un JSON válido."}), 400
 
-    url = data.get('url')
-    if not url:
-        logging.warning("URL key not found in received JSON.")
-        return jsonify({"error": "La clave 'url' es requerida en el JSON"}), 400
+    # Llamamos a nuestro nuevo y mejorado scraper
+    success, result = scrape_and_save_song(url, db, Song)
 
-    new_song = scrape_and_save_song(url, db, Song)
-    if new_song:
-        return jsonify(new_song.to_dict()), 201
-    
-    return jsonify({"error": "No se pudo scrapear o guardar la canción"}), 500
+    if success:
+        # Si tuvo éxito, result es el objeto de la canción
+        return jsonify(result.to_dict()), 201
+    else:
+        # Si falló, result es el mensaje de error
+        # Usamos 400 (Bad Request) porque el "fallo" está en la URL proporcionada
+        return jsonify({"error": result}), 400
 
 # --- RUTA DE DEPURACIÓN "ECO" ---
 # Añade esta función al final del archivo para nuestra prueba.

@@ -17,8 +17,20 @@ app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:/
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['JWT_SECRET_KEY'] = os.environ.get('JWT_SECRET_KEY') # Carga la clave secreta
 
+# --- CONFIGURACIÓN DE CORS MEJORADA Y ROBUSTA ---
 frontend_url = os.environ.get('FRONTEND_URL', 'http://localhost:3000')
-CORS(app, resources={r"/api/*": {"origins": frontend_url}})
+
+CORS(
+    app,
+    # Permite peticiones solo desde la URL de tu frontend.
+    origins=[frontend_url], 
+    # Define los métodos HTTP que tu API aceptará.
+    methods=["GET", "POST", "PUT", "DELETE"], 
+    # Define las cabeceras que el frontend puede enviar (importante para JWT).
+    allow_headers=["Content-Type", "Authorization"],
+    # Permite que el navegador envíe cookies y cabeceras de autorización.
+    supports_credentials=True 
+)
 
 # Inicialización
 db.init_app(app)

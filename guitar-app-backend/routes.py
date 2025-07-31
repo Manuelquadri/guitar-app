@@ -86,21 +86,29 @@ def update_song(song_id):
 @jwt_required()
 def scrape_song_endpoint():
     # --- Logging para depuración ---
-    # Esto imprimirá en los logs de Render
+    # Esto imprimirá en los logs de Render para que veamos qué pasa
     logging.basicConfig(level=logging.INFO)
-    logging.info(f"Scrape request received. Headers: {request.headers}")
+    logging.info("--- Scrape request received ---")
     
     try:
-        data = request.get_json()
-        logging.info(f"Request JSON data: {data}")
+        # Forzamos la obtención del JSON. Si falla, lo sabremos.
+        data = request.get_json(force=True)
+        logging.info(f"Request JSON data received: {data}")
     except Exception as e:
-        logging.error(f"Could not parse JSON: {e}")
+        logging.error(f"Could not parse JSON. Error: {e}")
+        # Imprimimos el cuerpo crudo de la petición si no es JSON
+        logging.error(f"Raw request body: {request.data}")
         return jsonify({"error": "Invalid JSON format"}), 400
     # --- Fin del logging ---
 
-    if not data or 'url' not in data:
-        logging.warning("URL not found in request data.")
-        return jsonify({"error": "La URL es requerida"}), 400
+    url = data.get('url') # Usamos .get() para evitar errores si la clave no existe
+    if not url:
+        logging.warning("URL key not found in received data.")
+        return jsonify({"error": "La URL es requerida en el JSON"}), 400
 
-    url = data['url']
+    new_song = scrape_and_save_song(url, db, Song)
+    if new_song:
+        return jsonify(new_song.to_dict()), 201
+    
+    return jsonify({"error": "No se pudo scrapear o guardar la canción"}), 500
     

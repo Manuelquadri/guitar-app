@@ -2,12 +2,14 @@
 
 from flask import Blueprint, jsonify, request
 from models import db, User, Song, UserSong
-from scraper import scrape_and_save_song # Asegúrate de que esta importación sea correcta
+from scraper import scrape_and_save_song
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
+import logging
 
-# Creamos el Blueprint aquí. Todas las rutas de la API colgarán de él.
+# Creamos el Blueprint. Todas las rutas de la API colgarán de él.
 api_bp = Blueprint('api', __name__, url_prefix='/api')
 
+# --- Rutas de Autenticación ---
 
 @api_bp.route('/register', methods=['POST'])
 def register():
@@ -24,7 +26,7 @@ def register():
     db.session.commit()
     return jsonify(new_user.to_dict()), 201
 
-
+# ¡ESTA ES LA FUNCIÓN QUE PROBABLEMENTE FALTABA O ESTABA INCORRECTA!
 @api_bp.route('/login', methods=['POST'])
 def login():
     data = request.get_json()
@@ -35,6 +37,8 @@ def login():
         return jsonify(access_token=access_token)
     return jsonify({"msg": "Bad username or password"}), 401
 
+
+# --- Rutas de Canciones ---
 
 @api_bp.route('/songs', methods=['GET'])
 def get_songs():
@@ -51,7 +55,7 @@ def get_song(song_id):
         return jsonify({"error": "Song not found"}), 404
 
     response_data = song_master.to_dict()
-    response_data['transposition'] = 0 # Valor por defecto para anónimos
+    response_data['transposition'] = 0 
 
     if current_user_id:
         user_song = UserSong.query.filter_by(user_id=current_user_id, song_id=song_id).first()
@@ -79,27 +83,20 @@ def update_song(song_id):
     if 'transposition' in data: user_song.transposition = data['transposition']
     
     db.session.commit()
-    return get_song(song_id) # Reutilizamos la lógica de get_song para la respuesta
+    return get_song(song_id)
 
 
 @api_bp.route('/scrape', methods=['POST'])
 @jwt_required()
 def scrape_song_endpoint():
+    # ... (Tu código de scraping)
     logging.basicConfig(level=logging.INFO)
     logging.info("--- Scrape request received ---")
-
-    # ¡EL CAMBIO CLAVE! Leemos el cuerpo crudo de la petición como texto.
-    url = request.data.decode('utf-8')
+    url = request.data.decode('utf-8') # Usando la versión de texto plano
     logging.info(f"Raw request body (URL) received: '{url}'")
-
-    if not url:
-        logging.warning("Request body is empty.")
-        return jsonify({"error": "La URL es requerida en el cuerpo de la petición"}), 400
-
-    # El resto de la lógica no cambia
+    if not url: return jsonify({"error": "URL is required"}), 400
+    
     new_song = scrape_and_save_song(url, db, Song)
-    if new_song:
-        return jsonify(new_song.to_dict()), 201
+    if new_song: return jsonify(new_song.to_dict()), 201
     
-    return jsonify({"error": "No se pudo scrapear o guardar la canción"}), 500
-    
+    return jsonify({"error": "Could not scrape or save the song"}), 500

@@ -11,28 +11,25 @@ function AddSongForm({ onSongAdded }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
-    setSuccess('');
-
-    if (!url || !url.includes('cifraclub.com')) {
-      setError('Por favor, introduce una URL válida de Cifra Club.');
+    setError(''); setSuccess('');
+    if (!url) {
+      setError('Por favor, introduce una URL.');
       return;
     }
-
     setIsLoading(true);
 
     try {
-      const payload = { url: url };
-
+      // ¡LA VERSIÓN CORRECTA! Envía un objeto JSON.
       const response = await authFetch(`${import.meta.env.VITE_API_URL}/api/scrape`, {
         method: 'POST',
-        body: JSON.stringify(payload),
+        // El hook se encarga de las cabeceras.
+        body: JSON.stringify({ url: url }), // Enviamos un objeto con la clave 'url'.
       });
 
       const responseData = await response.json();
 
       if (!response.ok) {
-        throw new Error(responseData.error || 'Algo salió mal al añadir la canción.');
+        throw new Error(responseData.error || 'Algo salió mal.');
       }
       
       onSongAdded(responseData);
@@ -66,5 +63,4 @@ function AddSongForm({ onSongAdded }) {
   );
 }
 
-// ¡¡ESTA ES LA LÍNEA CRUCIAL QUE FALTABA!!
 export default AddSongForm;

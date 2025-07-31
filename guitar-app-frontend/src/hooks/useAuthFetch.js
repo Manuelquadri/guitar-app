@@ -1,5 +1,4 @@
 // src/hooks/useAuthFetch.js
-
 import { useContext, useCallback } from 'react';
 import { AuthContext } from '../context/AuthContext';
 
@@ -7,10 +6,12 @@ export const useAuthFetch = () => {
   const { token, logout } = useContext(AuthContext);
 
   const authFetch = useCallback(async (url, options = {}) => {
-    // Copiamos las cabeceras que nos pasa el componente
-    const headers = { ...options.headers };
+    // ¡LA VERSIÓN CORRECTA! Establece Content-Type a JSON por defecto.
+    const headers = {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    };
 
-    // Añadimos el token de autorización si existe
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
     }

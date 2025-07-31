@@ -112,7 +112,28 @@ def scrape_song_endpoint():
     
     return jsonify({"error": "No se pudo scrapear o guardar la canción"}), 500
 
+# --- RUTA DE DEPURACIÓN "ECO" ---
+# Añade esta función al final del archivo para nuestra prueba.
+@api_bp.route('/test-post', methods=['POST'])
+@jwt_required()
+def test_post():
+    """
+    Una ruta simple que solo recibe un JSON y lo devuelve.
+    Si esto funciona, sabemos que la autenticación y el envío de JSON son correctos.
+    """
+    logging.basicConfig(level=logging.INFO)
+    logging.info("--- /test-post request received ---")
+    
+    try:
+        data = request.get_json()
+        logging.info(f"Test POST received data: {data}")
+        return jsonify(status="success", received_data=data), 200
+    except Exception as e:
+        logging.error(f"Error in /test-post: {e}")
+        logging.error(f"Raw body in /test-post: {request.data}")
+        return jsonify(error=str(e)), 500
 # --- RUTA DE DEPURACIÓN ---
+
 # Añade esta función al final del archivo
 @api_bp.route('/debug-routes')
 def list_routes():

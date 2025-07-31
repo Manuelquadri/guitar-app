@@ -66,21 +66,46 @@ function HomePage() {
   if (selectedSong) {
     return <SongView song={selectedSong} onBack={() => setSelectedSong(null)} onSongUpdated={handleSongUpdated} />;
   }
+  // --- FUNCIÓN DE PRUEBA ---
+  const handleTestPost = async () => {
+    console.log("Iniciando prueba de POST...");
+    try {
+      const response = await authFetch(`${import.meta.env.VITE_API_URL}/api/test-post`, {
+        method: 'POST',
+        body: JSON.stringify({ message: "Hola Mundo" }),
+      });
+      
+      const responseData = await response.json();
 
+      if (!response.ok) {
+        console.error("La prueba de POST falló. Respuesta del servidor:", responseData);
+        alert(`Error en la prueba: ${responseData.error || response.statusText}`);
+      } else {
+        console.log("¡La prueba de POST tuvo éxito! Respuesta del servidor:", responseData);
+        alert(`¡Éxito! El servidor recibió: ${JSON.stringify(responseData.received_data)}`);
+      }
+    } catch (err) {
+      console.error("Error crítico en la prueba de POST:", err);
+      alert(`Error de red o CORS en la prueba: ${err.message}`);
+    }
+  };
   return (
     <>
+      {/* --- BOTÓN DE PRUEBA --- */}
+      {/* Añade este botón en un lugar visible, como justo antes del formulario de añadir canción. */}
+      <div style={{ padding: '1rem', backgroundColor: '#444', margin: '1rem 0', borderRadius: '8px' }}>
+        <h3>Panel de Depuración</h3>
+        <button onClick={handleTestPost} style={{ backgroundColor: '#f0ad4e', color: 'black' }}>
+          Ejecutar Prueba de POST
+        </button>
+        <p>Abre la consola (F12) para ver los resultados detallados.</p>
+      </div>
+
       <AddSongForm onSongAdded={handleSongAdded} />
-      <FilterControls
-        searchTerm={searchTerm}
-        setSearchTerm={setSearchTerm}
-        artists={artists}
-        selectedArtist={selectedArtist}
-        setSelectedArtist={setSelectedArtist}
-      />
+      <FilterControls /* ... (tus props) ... */ />
       <SongList songs={filteredSongs} onSelectSong={setSelectedSong} />
     </>
   );
 }
 
-// ¡¡ESTA ES LA LÍNEA CRUCIAL QUE SEGURAMENTE FALTABA!!
 export default HomePage;

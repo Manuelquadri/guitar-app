@@ -11,31 +11,35 @@ function AddSongForm({ onSongAdded }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!url.includes('cifraclub.com')) {
-        setError('Por favor, introduce una URL válida de Cifra Club.');
-        return;
-    }
-
-    setIsLoading(true);
     setError('');
     setSuccess('');
 
-    try {
-      const response = await authFetch('https://guitar-app-backend.onrender.com/api/scrape', {
-        method: 'POST',
+    // Verificación extra en el frontend antes de enviar
+    if (!url || !url.includes('cifraclub.com')) {
+      setError('Por favor, introduce una URL válida de Cifra Club.');
+      return;
+    }
 
-        body: JSON.stringify({ url }),
+    setIsLoading(true);
+
+    try {
+      const payload = { url: url }; // Creamos el objeto explícitamente
+
+      const response = await authFetch(`${import.meta.env.VITE_API_URL}/api/scrape`, {
+        method: 'POST',
+        body: JSON.stringify(payload), // Enviamos el objeto
       });
 
-      const newSong = await response.json();
+      const responseData = await response.json();
 
       if (!response.ok) {
-        throw new Error(newSong.error || 'Algo salió mal.');
+        // Usamos el mensaje de error del backend si existe
+        throw new Error(responseData.error || 'Algo salió mal al añadir la canción.');
       }
       
-      onSongAdded(newSong); // Llama a la función del padre para actualizar la lista
-      setSuccess(`¡"${newSong.title}" ha sido añadida!`);
-      setUrl(''); // Limpia el input
+      onSongAdded(responseData);
+      setSuccess(`¡"${responseData.title}" ha sido añadida!`);
+      setUrl(''); // Limpia el input tras el éxito
     } catch (err) {
       setError(err.message);
     } finally {

@@ -1,8 +1,8 @@
-"""Initial migration with full user and song structure
+"""Create initial schema with all tables
 
-Revision ID: f2567b7944d3
+Revision ID: 4ba5df9670c7
 Revises: 
-Create Date: 2025-07-31 14:25:31.565007
+Create Date: 2025-07-31 14:47:04.332436
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = 'f2567b7944d3'
+revision = '4ba5df9670c7'
 down_revision = None
 branch_labels = None
 depends_on = None

@@ -1,12 +1,15 @@
+// src/pages/HomePage.jsx
+
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useAuthFetch } from '../hooks/useAuthFetch';
 import SongList from '../components/SongList';
 import SongView from '../components/SongView';
 import AddSongForm from '../components/AddSongForm';
 import FilterControls from '../components/FilterControls';
+import Navbar from '../components/Navbar'; // Asegúrate de que Navbar esté importado si lo usas en App.jsx
 
 function HomePage() {
-  const [songs, setSongs] = useState([]);
+  const [songs, setSongs] = useState([]); // El estado inicial es un array vacío, lo cual es seguro.
   const [selectedSong, setSelectedSong] = useState(null);
   const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
@@ -20,7 +23,18 @@ function HomePage() {
         throw new Error('No se pudo cargar la lista de canciones.');
       }
       const data = await response.json();
-      setSongs(data);
+
+      // ¡¡LA SOLUCIÓN ESTÁ AQUÍ!!
+      // Verificamos si la respuesta de la API es realmente un array.
+      if (Array.isArray(data)) {
+        setSongs(data); // Solo actualizamos el estado si es un array.
+      } else {
+        // Si no es un array, algo está mal. No rompemos la app,
+        // la dejamos con una lista vacía y mostramos un error.
+        console.error("Error: La API no devolvió un array de canciones.", data);
+        setSongs([]); // Importante para que .map() no falle.
+        setError("La respuesta del servidor no tuvo el formato esperado.");
+      }
     } catch (err) {
       setError(err.message);
       console.error(err);
@@ -32,9 +46,8 @@ function HomePage() {
   }, [fetchSongs]);
 
   const handleSongAdded = (newSong) => {
-    if (!songs.find(song => song.id === newSong.id)) {
-      setSongs(prevSongs => [...prevSongs, newSong]);
-    }
+    // Añadimos la nueva canción a la lista existente
+    setSongs(prevSongs => [...prevSongs, newSong]);
   };
 
   const handleSongUpdated = (updatedSong) => {
@@ -45,64 +58,37 @@ function HomePage() {
   };
 
   const filteredSongs = useMemo(() => {
-    let songsToFilter = [...songs];
-    if (selectedArtist) {
-      songsToFilter = songsToFilter.filter(s => s.artist === selectedArtist);
-    }
-    if (searchTerm) {
-      songsToFilter = songsToFilter.filter(s => s.title.toLowerCase().includes(searchTerm.toLowerCase()));
-    }
-    return songsToFilter;
+    return songs.filter(s => 
+      s.title.toLowerCase().includes(searchTerm.toLowerCase()) &&
+      (selectedArtist ? s.artist === selectedArtist : true)
+    );
   }, [songs, searchTerm, selectedArtist]);
 
   const artists = useMemo(() => {
     return [...new Set(songs.map(song => song.artist))].sort();
-  }, [songs]);
+  }, [songs]); // Esto ahora es seguro porque 'songs' siempre será un array.
 
   if (error) {
     return <div className="message error">{error}</div>;
   }
+  
+  // Mover Navbar aquí si no está en App.jsx
+  // <Navbar /> 
 
   if (selectedSong) {
     return <SongView song={selectedSong} onBack={() => setSelectedSong(null)} onSongUpdated={handleSongUpdated} />;
   }
-  // --- FUNCIÓN DE PRUEBA ---
-  const handleTestPost = async () => {
-    console.log("Iniciando prueba de POST...");
-    try {
-      const response = await authFetch(`${import.meta.env.VITE_API_URL}/api/test-post`, {
-        method: 'POST',
-        body: JSON.stringify({ message: "Hola Mundo" }),
-      });
-      
-      const responseData = await response.json();
 
-      if (!response.ok) {
-        console.error("La prueba de POST falló. Respuesta del servidor:", responseData);
-        alert(`Error en la prueba: ${responseData.error || response.statusText}`);
-      } else {
-        console.log("¡La prueba de POST tuvo éxito! Respuesta del servidor:", responseData);
-        alert(`¡Éxito! El servidor recibió: ${JSON.stringify(responseData.received_data)}`);
-      }
-    } catch (err) {
-      console.error("Error crítico en la prueba de POST:", err);
-      alert(`Error de red o CORS en la prueba: ${err.message}`);
-    }
-  };
   return (
     <>
-      {/* --- BOTÓN DE PRUEBA --- */}
-      {/* Añade este botón en un lugar visible, como justo antes del formulario de añadir canción. */}
-      <div style={{ padding: '1rem', backgroundColor: '#444', margin: '1rem 0', borderRadius: '8px' }}>
-        <h3>Panel de Depuración</h3>
-        <button onClick={handleTestPost} style={{ backgroundColor: '#f0ad4e', color: 'black' }}>
-          Ejecutar Prueba de POST
-        </button>
-        <p>Abre la consola (F12) para ver los resultados detallados.</p>
-      </div>
-
       <AddSongForm onSongAdded={handleSongAdded} />
-      <FilterControls /* ... (tus props) ... */ />
+      <FilterControls
+        searchTerm={searchTerm}
+        setSearchTerm={setSearchTerm}
+        artists={artists}
+        selectedArtist={selectedArtist}
+        setSelectedArtist={setSelectedArtist}
+      />
       <SongList songs={filteredSongs} onSelectSong={setSelectedSong} />
     </>
   );

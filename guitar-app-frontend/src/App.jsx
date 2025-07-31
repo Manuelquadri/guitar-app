@@ -96,7 +96,7 @@ function App() {
   // Si hay una canción seleccionada, muestra la vista de esa canción.
   return (
     <div className="App">
-      <header><h1>Guitar App</h1></header>
+      <header><h1>Fogonero</h1></header>
       <main>
         {!selectedSong ? (
           <>

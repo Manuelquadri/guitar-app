@@ -23,9 +23,7 @@ function AddSongForm({ onSongAdded }) {
     try {
       const response = await authFetch('https://guitar-app-backend.onrender.com/api/scrape', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+
         body: JSON.stringify({ url }),
       });
 

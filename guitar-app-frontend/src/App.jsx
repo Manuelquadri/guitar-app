@@ -1,4 +1,3 @@
-// src/App.jsx
 import React from 'react';
 import { Routes, Route } from 'react-router-dom';
 import HomePage from './pages/HomePage';
@@ -12,20 +11,13 @@ function App() {
   return (
     <div className="App">
       <Navbar />
-      <main>
+      <main className="container">
         <Routes>
-          {/* Rutas Públicas */}
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
-
-          {/* Ruta Principal Protegida */}
           <Route 
-            path="/*" // Coincide con cualquier otra ruta
-            element={
-              <ProtectedRoute>
-                <HomePage />
-              </ProtectedRoute>
-            } 
+            path="/*"
+            element={<ProtectedRoute><HomePage /></ProtectedRoute>} 
           />
         </Routes>
       </main>

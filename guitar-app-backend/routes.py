@@ -4,6 +4,7 @@ from flask import Blueprint, jsonify, request
 from models import db, User, Song, UserSong
 from scraper import scrape_and_save_song
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
+from flask import current_app
 import logging
 
 # Creamos el Blueprint. Todas las rutas de la API colgarán de él.
@@ -100,3 +101,19 @@ def scrape_song_endpoint():
     if new_song: return jsonify(new_song.to_dict()), 201
     
     return jsonify({"error": "Could not scrape or save the song"}), 500
+
+# --- RUTA DE DEPURACIÓN ---
+# Añade esta función al final del archivo
+@api_bp.route('/debug-routes')
+def list_routes():
+    """
+    Una ruta especial para listar todas las rutas conocidas por la aplicación.
+    """
+    import urllib
+    output = []
+    for rule in current_app.url_map.iter_rules():
+        methods = ','.join(rule.methods)
+        line = f"Endpoint: {rule.endpoint}, Methods: {methods}, URL: {urllib.parse.unquote(str(rule))}"
+        output.append(line)
+    
+    return jsonify(sorted(output))

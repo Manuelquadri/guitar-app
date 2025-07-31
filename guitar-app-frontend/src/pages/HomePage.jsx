@@ -1,5 +1,3 @@
-// src/pages/HomePage.jsx
-
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useAuthFetch } from '../hooks/useAuthFetch';
 import SongList from '../components/SongList';
@@ -15,8 +13,6 @@ function HomePage() {
   const [selectedArtist, setSelectedArtist] = useState('');
   const authFetch = useAuthFetch();
 
-  // Esta es la función que carga los datos.
-  // La envolvemos en useCallback para que sea estable y no cambie en cada render.
   const fetchSongs = useCallback(async () => {
     try {
       const response = await authFetch(`${import.meta.env.VITE_API_URL}/api/songs`);
@@ -29,13 +25,11 @@ function HomePage() {
       setError(err.message);
       console.error(err);
     }
-  }, [authFetch]); // Depende de authFetch, que también está memoizado.
+  }, [authFetch]);
 
-  // Este useEffect ahora es seguro. Se ejecutará solo cuando fetchSongs cambie (casi nunca).
   useEffect(() => {
     fetchSongs();
   }, [fetchSongs]);
-
 
   const handleSongAdded = (newSong) => {
     if (!songs.find(song => song.id === newSong.id)) {
@@ -65,7 +59,6 @@ function HomePage() {
     return [...new Set(songs.map(song => song.artist))].sort();
   }, [songs]);
 
-  // --- Renderizado ---
   if (error) {
     return <div className="message error">{error}</div>;
   }
@@ -89,4 +82,5 @@ function HomePage() {
   );
 }
 
+// ¡¡ESTA ES LA LÍNEA CRUCIAL QUE SEGURAMENTE FALTABA!!
 export default HomePage;

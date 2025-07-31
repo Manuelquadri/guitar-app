@@ -85,11 +85,22 @@ def update_song(song_id):
 @api_bp.route('/scrape', methods=['POST'])
 @jwt_required()
 def scrape_song_endpoint():
-    data = request.get_json()
-    url = data.get('url')
-    if not url: return jsonify({"error": "URL is required"}), 400
+    # --- Logging para depuración ---
+    # Esto imprimirá en los logs de Render
+    logging.basicConfig(level=logging.INFO)
+    logging.info(f"Scrape request received. Headers: {request.headers}")
     
-    new_song = scrape_and_save_song(url, db, Song)
-    if new_song: return jsonify(new_song.to_dict()), 201
+    try:
+        data = request.get_json()
+        logging.info(f"Request JSON data: {data}")
+    except Exception as e:
+        logging.error(f"Could not parse JSON: {e}")
+        return jsonify({"error": "Invalid JSON format"}), 400
+    # --- Fin del logging ---
+
+    if not data or 'url' not in data:
+        logging.warning("URL not found in request data.")
+        return jsonify({"error": "La URL es requerida"}), 400
+
+    url = data['url']
     
-    return jsonify({"error": "Could not scrape or save the song"}), 500

@@ -1,11 +1,13 @@
 // src/components/AddSongForm.jsx
 import React, { useState } from 'react';
+import { useAuthFetch } from '../hooks/useAuthFetch';
 
 function AddSongForm({ onSongAdded }) {
   const [url, setUrl] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const authFetch = useAuthFetch();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -19,7 +21,7 @@ function AddSongForm({ onSongAdded }) {
     setSuccess('');
 
     try {
-      const response = await fetch('https://guitar-app-backend.onrender.com/api/scrape', {
+      const response = await authFetch('https://guitar-app-backend.onrender.com/api/scrape', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

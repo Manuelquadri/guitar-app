@@ -1,8 +1,10 @@
 // src/components/SongView.jsx
 import React, { useState, useEffect } from 'react';
 import { transposeSongContent } from '../utils/transpose';
+import { useAuthFetch } from '../hooks/useAuthFetch'; 
 
 function SongView({ song, onBack, onSongUpdated }) {
+  const authFetch = useAuthFetch();
   // --- Estados ---
   const [transposition, setTransposition] = useState(song.transposition || 0);
   const [isEditing, setIsEditing] = useState(false);

@@ -24,7 +24,7 @@ CORS(app, resources={r"/api/*": {"origins": frontend_url}})
 db.init_app(app)
 migrate = Migrate(app, db) 
 jwt = JWTManager(app)
-#-CORS(app) # Habilita CORS para todas las rutas
+
 
 # --- Rutas de la API ---
 def register():

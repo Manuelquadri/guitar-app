@@ -85,27 +85,18 @@ def update_song(song_id):
 @api_bp.route('/scrape', methods=['POST'])
 @jwt_required()
 def scrape_song_endpoint():
-    # --- Logging para depuración ---
-    # Esto imprimirá en los logs de Render para que veamos qué pasa
     logging.basicConfig(level=logging.INFO)
     logging.info("--- Scrape request received ---")
-    
-    try:
-        # Forzamos la obtención del JSON. Si falla, lo sabremos.
-        data = request.get_json(force=True)
-        logging.info(f"Request JSON data received: {data}")
-    except Exception as e:
-        logging.error(f"Could not parse JSON. Error: {e}")
-        # Imprimimos el cuerpo crudo de la petición si no es JSON
-        logging.error(f"Raw request body: {request.data}")
-        return jsonify({"error": "Invalid JSON format"}), 400
-    # --- Fin del logging ---
 
-    url = data.get('url') # Usamos .get() para evitar errores si la clave no existe
+    # ¡EL CAMBIO CLAVE! Leemos el cuerpo crudo de la petición como texto.
+    url = request.data.decode('utf-8')
+    logging.info(f"Raw request body (URL) received: '{url}'")
+
     if not url:
-        logging.warning("URL key not found in received data.")
-        return jsonify({"error": "La URL es requerida en el JSON"}), 400
+        logging.warning("Request body is empty.")
+        return jsonify({"error": "La URL es requerida en el cuerpo de la petición"}), 400
 
+    # El resto de la lógica no cambia
     new_song = scrape_and_save_song(url, db, Song)
     if new_song:
         return jsonify(new_song.to_dict()), 201

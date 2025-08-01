@@ -50,7 +50,7 @@ def get_songs():
 @api_bp.route('/songs/<int:song_id>', methods=['GET'])
 @jwt_required(optional=True)
 def get_song(song_id):
-    current_user_id = get_jwt_identity()
+    current_user_id_str = get_jwt_identity() # Esto nos da una STRING (ej: "1") o None
     song_master = Song.query.get(song_id)
     if not song_master:
         return jsonify({"error": "Song not found"}), 404
@@ -58,7 +58,8 @@ def get_song(song_id):
     response_data = song_master.to_dict()
     response_data['transposition'] = 0 
 
-    if current_user_id:
+    if current_user_id_str:
+        current_user_id = int(current_user_id_str) # Convertimos la string a un ENTERO
         user_song = UserSong.query.filter_by(user_id=current_user_id, song_id=song_id).first()
         if user_song:
             response_data['content'] = user_song.content or song_master.content

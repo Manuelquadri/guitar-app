@@ -12,25 +12,19 @@ function AddSongForm({ onSongAdded }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError(''); setSuccess('');
-
-    if (!url) {
-      setError('Por favor, introduce una URL.');
-      return;
-    }
+    if (!url) { return; }
     setIsLoading(true);
 
     try {
-      // ¡ESTA ES LA LÍNEA CLAVE! Enviamos un objeto JSON.
       const response = await authFetch(`${import.meta.env.VITE_API_URL}/api/scrape`, {
         method: 'POST',
-        // No necesitamos 'headers' aquí, el hook se encarga.
-        // El cuerpo es un STRING que representa un objeto JSON.
         body: JSON.stringify({ url: url }),
       });
 
       const responseData = await response.json();
       if (!response.ok) {
-        throw new Error(responseData.error || 'Algo salió mal al añadir la canción.');
+        // ¡ESTO ES CLAVE! Ahora mostramos el error del backend.
+        throw new Error(responseData.error || 'Ocurrió un error desconocido.');
       }
       
       onSongAdded(responseData);
@@ -47,16 +41,8 @@ function AddSongForm({ onSongAdded }) {
     <div className="add-song-form">
       <h3>Añadir nueva canción desde Cifra Club</h3>
       <form onSubmit={handleSubmit}>
-        <input
-          type="url"
-          value={url}
-          onChange={(e) => setUrl(e.target.value)}
-          placeholder="Pega la URL aquí..."
-          required
-        />
-        <button type="submit" disabled={isLoading}>
-          {isLoading ? 'Añadiendo...' : 'Añadir Canción'}
-        </button>
+        <input type="url" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="Pega la URL aquí..." required />
+        <button type="submit" disabled={isLoading}>{isLoading ? 'Añadiendo...' : 'Añadir Canción'}</button>
       </form>
       {error && <p className="message error">{error}</p>}
       {success && <p className="message success">{success}</p>}

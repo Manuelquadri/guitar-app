@@ -94,21 +94,21 @@ def scrape_song_endpoint():
         data = request.get_json()
         url = data.get('url')
         if not url:
-            return jsonify({"error": "La clave 'url' es requerida en el JSON"}), 400
+            return jsonify({"error": "La clave 'url' es requerida en el cuerpo JSON."}), 400
     except Exception:
         return jsonify({"error": "El cuerpo de la petición debe ser un JSON válido."}), 400
 
-    # Llamamos a nuestro nuevo y mejorado scraper
+    # Llamamos a nuestro scraper a prueba de balas
     success, result = scrape_and_save_song(url, db, Song)
 
     if success:
-        # Si tuvo éxito, result es el objeto de la canción
+        # Éxito: result es el objeto de la canción
         return jsonify(result.to_dict()), 201
     else:
-        # Si falló, result es el mensaje de error
-        # Usamos 400 (Bad Request) porque el "fallo" está en la URL proporcionada
-        return jsonify({"error": result}), 400
-
+        # Fracaso: result es el mensaje de error
+        # Usamos 409 (Conflict) si la canción ya existe, si no 400 (Bad Request)
+        status_code = 409 if "ya existe" in result else 400
+        return jsonify({"error": result}), status_code
 # --- RUTA DE DEPURACIÓN "ECO" ---
 # Añade esta función al final del archivo para nuestra prueba.
 @api_bp.route('/test-post', methods=['POST'])

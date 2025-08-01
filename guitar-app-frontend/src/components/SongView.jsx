@@ -1,6 +1,6 @@
 // src/components/SongView.jsx
 
-import React, { useState, useEffect, useRef } from 'react'; // 1. ASEGÚRATE DE IMPORTAR useRef
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuthFetch } from '../hooks/useAuthFetch';
 import { transposeSongContent } from '../utils/transpose';
 
@@ -15,14 +15,11 @@ function SongView({ song, onBack, onSongUpdated }) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [speed, setSpeed] = useState(50);
   const [fontSize, setFontSize] = useState(1);
-
   const authFetch = useAuthFetch();
-
-  // 2. ¡AÑADIMOS DE VUELTA EL useRef PARA EL SCROLL!
   const scrollIntervalRef = useRef(null);
 
   // --- Efectos ---
-  // Efecto para cargar los datos de la canción (sin cambios)
+  // Efecto para cargar los datos completos y personalizados de la canción
   useEffect(() => {
     const fetchSongDetails = async () => {
       try {
@@ -39,29 +36,53 @@ function SongView({ song, onBack, onSongUpdated }) {
     fetchSongDetails();
   }, [song.id, authFetch]);
 
-  // 3. ¡AÑADIMOS DE VUELTA EL useEffect PARA EL MOTOR DEL SCROLL!
+  // Efecto para controlar el motor del auto-scroll
   useEffect(() => {
-    // Si no estamos en modo vista o no está sonando, nos aseguramos de que no haya scroll.
     if (!isPlaying || isEditing) {
       clearInterval(scrollIntervalRef.current);
       return;
     }
-    
-    // Si está sonando y en modo vista, iniciamos el intervalo.
     scrollIntervalRef.current = setInterval(() => {
       window.scrollBy(0, 1);
-    }, 101 - speed); // Invertimos el valor para que el slider sea intuitivo
-
-    // La función de limpieza se ejecuta cuando el componente se desmonta o las dependencias cambian.
+    }, 101 - speed);
     return () => clearInterval(scrollIntervalRef.current);
-  }, [isPlaying, isEditing, speed]); // Depende de estos tres estados
+  }, [isPlaying, isEditing, speed]);
 
 
-  // --- Handlers (sin cambios) ---
-  const handleSave = async () => { /* ... Tu código de guardado ... */ };
-  const handleCancel = () => { /* ... Tu código de cancelar ... */ };
-  const handleResetTranspose = () => setTransposition(loadedSong.transposition || 0);
+  // --- Handlers (Manejadores de eventos) ---
 
+  // ¡ESTA ES LA FUNCIÓN QUE FALTABA!
+  const handleSave = async () => {
+    if (!loadedSong) return;
+    setIsSaving(true);
+    try {
+      const response = await authFetch(`${import.meta.env.VITE_API_URL}/api/songs/${loadedSong.id}`, {
+        method: 'PUT',
+        body: JSON.stringify({ content: editedContent, transposition: transposition }),
+      });
+      const updatedSongData = await response.json();
+      if (!response.ok) {
+        throw new Error(updatedSongData.error || 'No se pudo guardar la canción.');
+      }
+      setLoadedSong(updatedSongData);
+      onSongUpdated(updatedSongData);
+      setIsEditing(false);
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleCancel = () => {
+    setIsEditing(false);
+    if (loadedSong) {
+      setEditedContent(loadedSong.content);
+      setTransposition(loadedSong.transposition || 0);
+    }
+  };
+
+  const handleResetTranspose = () => setTransposition(loadedSong ? loadedSong.transposition || 0 : 0);
 
   // --- Renderizado ---
   if (error) return <div className="message error">{error}</div>;
@@ -74,10 +95,6 @@ function SongView({ song, onBack, onSongUpdated }) {
 
   return (
     <div className="song-view">
-      {/* El JSX de los controles y el contenido no necesita cambiar. */}
-      {/* Ya estaba correctamente diseñado en la respuesta anterior. */}
-      {/* Pega aquí el JSX completo de la respuesta anterior, que ya estaba bien. */}
-
        {!isEditing && (
         <button className="edit-button-corner" onClick={() => setIsEditing(true)}>
           ✏️

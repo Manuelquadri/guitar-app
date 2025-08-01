@@ -6,7 +6,7 @@ export const useAuthFetch = () => {
   const { token, logout } = useContext(AuthContext);
 
   const authFetch = useCallback(async (url, options = {}) => {
-    // ¡LA VERSIÓN CORRECTA! Establece Content-Type a JSON por defecto.
+    // ESTA ES LA LÍNEA CLAVE: Asegura que el Content-Type es JSON por defecto.
     const headers = {
       'Content-Type': 'application/json',
       ...options.headers,

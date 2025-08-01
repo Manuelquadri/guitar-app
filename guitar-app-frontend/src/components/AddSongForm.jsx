@@ -12,6 +12,7 @@ function AddSongForm({ onSongAdded }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError(''); setSuccess('');
+
     if (!url) {
       setError('Por favor, introduce una URL.');
       return;
@@ -19,17 +20,17 @@ function AddSongForm({ onSongAdded }) {
     setIsLoading(true);
 
     try {
-      // ¡LA VERSIÓN CORRECTA! Envía un objeto JSON.
+      // ¡ESTA ES LA LÍNEA CLAVE! Enviamos un objeto JSON.
       const response = await authFetch(`${import.meta.env.VITE_API_URL}/api/scrape`, {
         method: 'POST',
-        // El hook se encarga de las cabeceras.
-        body: JSON.stringify({ url: url }), // Enviamos un objeto con la clave 'url'.
+        // No necesitamos 'headers' aquí, el hook se encarga.
+        // El cuerpo es un STRING que representa un objeto JSON.
+        body: JSON.stringify({ url: url }),
       });
 
       const responseData = await response.json();
-
       if (!response.ok) {
-        throw new Error(responseData.error || 'Algo salió mal.');
+        throw new Error(responseData.error || 'Algo salió mal al añadir la canción.');
       }
       
       onSongAdded(responseData);

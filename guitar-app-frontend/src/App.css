@@ -366,7 +366,13 @@ header {
 }
 
 .auth-page button {
-
+  background-color: #28a745;
+    color: white;
+}
+.auth-page button:hover {
+  transform: scale(1.1);
+  background-color: #218838;
+  /* Verde un poco más oscuro al pasar el ratón */
 }
 
 .auth-page p {
@@ -395,5 +401,6 @@ header {
 
 .nav-link,
 .nav-button {
-  /* ... estilos para tus botones/links ... */
+  display: flex;
+    gap: 1rem;
 }

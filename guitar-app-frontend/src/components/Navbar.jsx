@@ -8,7 +8,7 @@ function Navbar() {
 
   return (
     <nav className="navbar">
-      <Link to="/" className="navbar-brand">🔥 Guitar App</Link>
+      <Link to="/" className="navbar-brand">Fogonero</Link>
       <div className="navbar-links">
         {isLoggedIn ? (
           <button onClick={logout} className="nav-button">Cerrar Sesión</button>

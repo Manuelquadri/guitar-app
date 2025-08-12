@@ -1,0 +1,7 @@
+pass:Ty6@W4LKu%zEpDZ
+
+
+postgresql://fogonero_db_user:DOhCg07FASsW6wIpBb3lsYcHuDfcfux5@dpg-d25tsss9c44c73efbvhg-a.oregon-postgres.render.com/fogonero_db
+
+
+postgresql://postgres:Ty6@W4LKu%zEpDZ@db.rwmmyidwfydoxuqebrtt.supabase.co:5432/postgres

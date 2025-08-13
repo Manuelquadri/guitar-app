@@ -6,6 +6,11 @@ db = SQLAlchemy()
 
 # Tabla de Usuarios
 class User(db.Model):
+    # --- INICIO DE LA MODIFICACIÓN ---
+    __tablename__ = 'user'  # Es buena práctica definirlo explícitamente
+    __table_args__ = {'schema': 'public'}
+    # --- FIN DE LA MODIFICACIÓN ---
+
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
     password_hash = db.Column(db.String(256), nullable=False)
@@ -22,8 +27,13 @@ class User(db.Model):
     def to_dict(self):
         return {"id": self.id, "username": self.username}
 
-# Tabla de Canciones Maestras (casi sin cambios)
+# Tabla de Canciones Maestras
 class Song(db.Model):
+    # --- INICIO DE LA MODIFICACIÓN ---
+    __tablename__ = 'song'
+    __table_args__ = {'schema': 'public'}
+    # --- FIN DE LA MODIFICACIÓN ---
+
     id = db.Column(db.Integer, primary_key=True)
     artist = db.Column(db.String(100), nullable=False)
     title = db.Column(db.String(100), nullable=False)
@@ -40,11 +50,16 @@ class Song(db.Model):
             "content": self.content,
         }
 
-# ¡NUEVA TABLA PUENTE!
+# Tabla Puente UserSong
 class UserSong(db.Model):
+    # --- INICIO DE LA MODIFICACIÓN ---
+    __tablename__ = 'user_song'
+    __table_args__ = {'schema': 'public'}
+    # --- FIN DE LA MODIFICACIÓN ---
+
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    song_id = db.Column(db.Integer, db.ForeignKey('song.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('public.user.id'), nullable=False)
+    song_id = db.Column(db.Integer, db.ForeignKey('public.song.id'), nullable=False)
     
     # El contenido y la afinación personalizados son opcionales (pueden ser NULL)
     content = db.Column(db.Text, nullable=True)

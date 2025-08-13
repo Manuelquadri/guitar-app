@@ -1,3 +1,12 @@
+
+-- =================================================================
+-- SCRIPT DE LIMPIEZA TOTAL (Añadido manualmente)
+-- Esto asegura que la base de datos esté vacía antes de restaurar.
+-- =================================================================
+DROP TABLE IF EXISTS alembic_version CASCADE;
+DROP TABLE IF EXISTS user_song CASCADE;
+DROP TABLE IF EXISTS "user" CASCADE;
+DROP TABLE IF EXISTS song CASCADE;
 --
 -- PostgreSQL database dump
 --

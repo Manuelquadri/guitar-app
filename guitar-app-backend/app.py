@@ -19,8 +19,16 @@ def create_app():
     app.config.from_mapping(
         SQLALCHEMY_DATABASE_URI=database_url,
         SQLALCHEMY_TRACK_MODIFICATIONS=False,
-        JWT_SECRET_KEY=os.environ.get('JWT_SECRET_KEY')
+        JWT_SECRET_KEY=os.environ.get('JWT_SECRET_KEY'),
+        # --- LÍNEA CLAVE AÑADIDA ---
+        # Pasa opciones directamente al motor de SQLAlchemy
+        SQLALCHEMY_ENGINE_OPTIONS={
+            'connect_args': {
+                "options": "-csearch_path=public"
+            }
+        }
     )
+    
     db.init_app(app)
     migrate.init_app(app, db)
     jwt.init_app(app)

@@ -48,17 +48,15 @@ function SongView({ song, onBack, onSongUpdated }) {
     return () => clearInterval(scrollIntervalRef.current);
   }, [isPlaying, isEditing, speed]);
 
-
   // --- Handlers (Manejadores de eventos) ---
 
-  // ¡ESTA ES LA FUNCIÓN QUE FALTABA!
-  const handleSave = async () => {
+  const saveSong = async (newContent, newTransposition) => {
     if (!loadedSong) return;
     setIsSaving(true);
     try {
       const response = await authFetch(`${import.meta.env.VITE_API_URL}/api/songs/${loadedSong.id}`, {
         method: 'PUT',
-        body: JSON.stringify({ content: editedContent, transposition: transposition }),
+        body: JSON.stringify({ content: newContent, transposition: newTransposition }),
       });
       const updatedSongData = await response.json();
       if (!response.ok) {
@@ -66,12 +64,29 @@ function SongView({ song, onBack, onSongUpdated }) {
       }
       setLoadedSong(updatedSongData);
       onSongUpdated(updatedSongData);
-      setIsEditing(false);
+      return updatedSongData;
     } catch (err) {
-      alert(err.message);
+      console.error(err);
+      if (isEditing) alert(err.message);
     } finally {
       setIsSaving(false);
     }
+  };
+
+  // Efecto para Auto-Guardado de Transposición
+  useEffect(() => {
+    if (!loadedSong) return;
+    if (transposition !== (loadedSong.transposition || 0) && !isEditing) {
+      const timerId = setTimeout(() => {
+        saveSong(loadedSong.content, transposition);
+      }, 1000);
+      return () => clearTimeout(timerId);
+    }
+  }, [transposition, loadedSong, isEditing]);
+
+  const handleSave = async () => {
+    await saveSong(editedContent, transposition);
+    setIsEditing(false);
   };
 
   const handleCancel = () => {
@@ -95,7 +110,7 @@ function SongView({ song, onBack, onSongUpdated }) {
 
   return (
     <div className="song-view">
-       {!isEditing && (
+      {!isEditing && (
         <button className="edit-button-corner" onClick={() => setIsEditing(true)}>
           ✏️
         </button>
@@ -105,7 +120,7 @@ function SongView({ song, onBack, onSongUpdated }) {
         <button onClick={isEditing ? handleCancel : onBack}>
           {isEditing ? 'Cancelar' : '← Volver'}
         </button>
-        
+
         {isEditing ? (
           <div className="edit-controls">
             <button onClick={handleSave} disabled={isSaving}>
@@ -120,19 +135,19 @@ function SongView({ song, onBack, onSongUpdated }) {
               <button onClick={() => setTransposition(t => t + 1)}>+</button>
               {transposition !== (loadedSong.transposition || 0) && <button onClick={handleResetTranspose}>Reset</button>}
             </div>
-            
+
             <div className="font-size-controls">
               <button onClick={() => setFontSize(f => Math.max(0.5, f - 0.1))}>A-</button>
               <span>Fuente: {Math.round(fontSize * 100)}%</span>
               <button onClick={() => setFontSize(f => f + 0.1)}>A+</button>
               {fontSize !== 1 && <button onClick={() => setFontSize(1)}>Reset</button>}
             </div>
-            
+
             <div className="speed-control">
-                <button className="play-pause" onClick={() => setIsPlaying(p => !p)}>{isPlaying ? 'Pausa' : '▶ Scroll'}</button>
-                <label>Lento</label>
-                <input type="range" min="1" max="100" value={speed} onChange={(e) => setSpeed(e.target.value)} />
-                <label>Rápido</label>
+              <button className="play-pause" onClick={() => setIsPlaying(p => !p)}>{isPlaying ? 'Pausa' : '▶ Scroll'}</button>
+              <label>Lento</label>
+              <input type="range" min="1" max="100" value={speed} onChange={(e) => setSpeed(e.target.value)} />
+              <label>Rápido</label>
             </div>
           </>
         )}

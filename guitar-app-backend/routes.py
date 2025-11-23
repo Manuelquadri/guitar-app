@@ -71,7 +71,8 @@ def get_song(song_id):
 @api_bp.route('/songs/<int:song_id>', methods=['PUT'])
 @jwt_required()
 def update_song(song_id):
-    current_user_id = get_jwt_identity()
+    current_user_id = get_jwt_identity()# Obtenemos la STRING
+    current_user_id = int(current_user_id_str) # La convertimos a ENTERO
     if not Song.query.get(song_id):
         return jsonify({"error": "Song not found"}), 404
         

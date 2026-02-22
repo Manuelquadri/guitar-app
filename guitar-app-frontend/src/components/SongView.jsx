@@ -1,22 +1,25 @@
 // src/components/SongView.jsx
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import { useAuthFetch } from '../hooks/useAuthFetch';
 import { transposeSongContent } from '../utils/transpose';
+import { saveToCache, getFromCache } from '../utils/offlineStore';
 
 function SongView({ song, onBack, onSongUpdated }) {
   // --- Estados y Refs ---
   const [loadedSong, setLoadedSong] = useState(null);
   const [error, setError] = useState('');
+  const [offlineMessage, setOfflineMessage] = useState('');
   const [transposition, setTransposition] = useState(0);
   const [isEditing, setIsEditing] = useState(false);
   const [editedContent, setEditedContent] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [speed, setSpeed] = useState(50);
+  const [speed, setSpeed] = useState(250);
   const [fontSize, setFontSize] = useState(1);
   const authFetch = useAuthFetch();
   const scrollIntervalRef = useRef(null);
+  const preRef = useRef(null);
 
   // --- Efectos ---
   // Efecto para cargar los datos completos y personalizados de la canción
@@ -29,8 +32,25 @@ function SongView({ song, onBack, onSongUpdated }) {
         setLoadedSong(data);
         setEditedContent(data.content);
         setTransposition(data.transposition || 0);
+        saveToCache(`song_${song.id}`, data); // Caché local para esta canción
       } catch (err) {
-        setError(err.message);
+        const cached = getFromCache(`song_${song.id}`);
+        if (cached) {
+          setLoadedSong(cached);
+          setEditedContent(cached.content);
+          setTransposition(cached.transposition || 0);
+          setOfflineMessage('Modo Offline: Mostrando versión guardada en tu dispositivo.');
+          setError(''); // Limpiamos el error fatal
+        } else if (song && song.content) {
+          // Fallback final: usar la información maestra que vino del HomePage
+          setLoadedSong(song);
+          setEditedContent(song.content);
+          setTransposition(song.transposition || 0);
+          setOfflineMessage('Modo Offline: Mostrando versión original guardada en caché general.');
+          setError('');
+        } else {
+          setError(err.message);
+        }
       }
     };
     fetchSongDetails();
@@ -40,13 +60,56 @@ function SongView({ song, onBack, onSongUpdated }) {
   useEffect(() => {
     if (!isPlaying || isEditing) {
       clearInterval(scrollIntervalRef.current);
+      if (document.fullscreenElement) {
+        document.exitFullscreen().catch(err => console.error(err));
+      }
       return;
     }
+
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(err => console.error(err));
+    }
+
     scrollIntervalRef.current = setInterval(() => {
       window.scrollBy(0, 1);
-    }, 101 - speed);
+    }, 501 - speed);
+
     return () => clearInterval(scrollIntervalRef.current);
   }, [isPlaying, isEditing, speed]);
+
+  // Efecto para auto-ajustar el tamaño de fuente al ancho de la pantalla
+  useLayoutEffect(() => {
+    const adjustFontSize = () => {
+      if (!preRef.current || isEditing) return;
+
+      const originalFs = preRef.current.style.fontSize;
+      preRef.current.style.fontSize = '1rem';
+
+      const scrollWidth = preRef.current.scrollWidth;
+      const clientWidth = preRef.current.clientWidth;
+
+      if (scrollWidth > clientWidth && clientWidth > 0) {
+        const ratio = clientWidth / scrollWidth;
+        setFontSize(Number((ratio * 0.96).toFixed(2))); // 4% de margen
+      }
+
+      // Restauramos
+      preRef.current.style.fontSize = originalFs;
+    };
+
+    adjustFontSize();
+
+    let timeoutId;
+    const handleResize = () => {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(adjustFontSize, 100);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => {
+      clearTimeout(timeoutId);
+      window.removeEventListener('resize', handleResize);
+    };
+  }, [loadedSong, editedContent, transposition, isEditing]);
 
   // --- Handlers (Manejadores de eventos) ---
 
@@ -109,7 +172,9 @@ function SongView({ song, onBack, onSongUpdated }) {
   );
 
   return (
-    <div className="song-view">
+    <div className={`song-view ${isPlaying ? 'playing' : ''}`}>
+      {offlineMessage && <div className="message success" style={{ marginBottom: '1rem', backgroundColor: '#856404', color: '#fff3cd' }}>{offlineMessage}</div>}
+
       {!isEditing && (
         <button className="edit-button-corner" onClick={() => setIsEditing(true)}>
           ✏️
@@ -146,8 +211,21 @@ function SongView({ song, onBack, onSongUpdated }) {
             <div className="speed-control">
               <button className="play-pause" onClick={() => setIsPlaying(p => !p)}>{isPlaying ? 'Pausa' : '▶ Scroll'}</button>
               <label>Lento</label>
-              <input type="range" min="1" max="100" value={speed} onChange={(e) => setSpeed(e.target.value)} />
+              <input type="range" min="1" max="500" value={speed} onChange={(e) => setSpeed(Number(e.target.value))} />
               <label>Rápido</label>
+              <input
+                type="number"
+                className="speed-input-number"
+                min="1"
+                max="500"
+                value={speed}
+                onChange={(e) => {
+                  let val = Number(e.target.value);
+                  if (val > 500) val = 500;
+                  if (val < 1) val = 1;
+                  setSpeed(val);
+                }}
+              />
             </div>
           </>
         )}
@@ -161,9 +239,11 @@ function SongView({ song, onBack, onSongUpdated }) {
         />
       ) : (
         <pre
+          ref={preRef}
           className="song-content"
-          style={{ fontSize: `${fontSize}rem` }}
+          style={{ fontSize: `${fontSize}rem`, cursor: isPlaying ? 'pointer' : 'default' }}
           dangerouslySetInnerHTML={{ __html: displayedContent }}
+          onClick={() => { if (isPlaying) setIsPlaying(false); }}
         />
       )}
     </div>

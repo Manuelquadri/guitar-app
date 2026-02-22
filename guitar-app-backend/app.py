@@ -4,6 +4,7 @@ from flask_cors import CORS
 from flask_jwt_extended import JWTManager
 from flask_migrate import Migrate
 from dotenv import load_dotenv
+from datetime import timedelta
 from models import db
 
 load_dotenv()
@@ -20,6 +21,7 @@ def create_app():
         SQLALCHEMY_DATABASE_URI=database_url,
         SQLALCHEMY_TRACK_MODIFICATIONS=False,
         JWT_SECRET_KEY=os.environ.get('JWT_SECRET_KEY'),
+        JWT_ACCESS_TOKEN_EXPIRES=timedelta(days=30),
         # --- LÍNEA CLAVE AÑADIDA ---
         # Pasa opciones directamente al motor de SQLAlchemy
         SQLALCHEMY_ENGINE_OPTIONS={
@@ -33,9 +35,9 @@ def create_app():
     migrate.init_app(app, db)
     jwt.init_app(app)
 
-    frontend_url = os.environ.get('FRONTEND_URL')
+    frontend_url = os.environ.get('FRONTEND_URL', '*')
     if frontend_url:
-        CORS(app, origins=[frontend_url], methods=["GET", "POST", "PUT"], allow_headers=["Content-Type", "Authorization"], supports_credentials=True)
+        CORS(app, supports_credentials=True)
 
     from routes import api_bp
     app.register_blueprint(api_bp)

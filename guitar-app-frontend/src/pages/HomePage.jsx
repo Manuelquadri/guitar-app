@@ -7,11 +7,13 @@ import SongView from '../components/SongView';
 import AddSongForm from '../components/AddSongForm';
 import FilterControls from '../components/FilterControls';
 import Navbar from '../components/Navbar'; // Asegúrate de que Navbar esté importado si lo usas en App.jsx
+import { saveToCache, getFromCache } from '../utils/offlineStore';
 
 function HomePage() {
   const [songs, setSongs] = useState([]); // El estado inicial es un array vacío, lo cual es seguro.
   const [selectedSong, setSelectedSong] = useState(null);
   const [error, setError] = useState('');
+  const [offlineMessage, setOfflineMessage] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedArtist, setSelectedArtist] = useState('');
   const authFetch = useAuthFetch();
@@ -24,20 +26,24 @@ function HomePage() {
       }
       const data = await response.json();
 
-      // ¡¡LA SOLUCIÓN ESTÁ AQUÍ!!
-      // Verificamos si la respuesta de la API es realmente un array.
       if (Array.isArray(data)) {
-        setSongs(data); // Solo actualizamos el estado si es un array.
+        setSongs(data);
+        saveToCache('cached_songs', data); // Guardamos la caché
       } else {
-        // Si no es un array, algo está mal. No rompemos la app,
-        // la dejamos con una lista vacía y mostramos un error.
         console.error("Error: La API no devolvió un array de canciones.", data);
-        setSongs([]); // Importante para que .map() no falle.
+        setSongs([]);
         setError("La respuesta del servidor no tuvo el formato esperado.");
       }
     } catch (err) {
-      setError(err.message);
-      console.error(err);
+      // Intento offline fallback
+      const cached = getFromCache('cached_songs');
+      if (cached && Array.isArray(cached)) {
+        setSongs(cached);
+        setOfflineMessage('Modo Offline: Usando caché local.');
+        setError(''); // Limpiamos error para que se muestre la lista
+      } else {
+        setError('Error de conexión y no hay caché local disponible.');
+      }
     }
   }, [authFetch]);
 
@@ -51,14 +57,14 @@ function HomePage() {
   };
 
   const handleSongUpdated = (updatedSong) => {
-    setSongs(prevSongs => 
+    setSongs(prevSongs =>
       prevSongs.map(s => (s.id === updatedSong.id ? updatedSong : s))
     );
     setSelectedSong(updatedSong);
   };
 
   const filteredSongs = useMemo(() => {
-    return songs.filter(s => 
+    return songs.filter(s =>
       s.title.toLowerCase().includes(searchTerm.toLowerCase()) &&
       (selectedArtist ? s.artist === selectedArtist : true)
     );
@@ -71,7 +77,7 @@ function HomePage() {
   if (error) {
     return <div className="message error">{error}</div>;
   }
-  
+
   // Mover Navbar aquí si no está en App.jsx
   // <Navbar /> 
 
@@ -81,6 +87,7 @@ function HomePage() {
 
   return (
     <>
+      {offlineMessage && <div className="message success" style={{ marginBottom: '1rem', backgroundColor: '#856404', color: '#fff3cd' }}>{offlineMessage}</div>}
       <AddSongForm onSongAdded={handleSongAdded} />
       <FilterControls
         searchTerm={searchTerm}

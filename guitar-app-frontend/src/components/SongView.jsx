@@ -136,10 +136,11 @@ function SongView({ song, onBack, onSongUpdated }) {
       }
       setLoadedSong(updatedSongData);
       onSongUpdated(updatedSongData);
+      saveToCache(`song_${loadedSong.id}`, updatedSongData); // Fix: sync cache!
       return updatedSongData;
     } catch (err) {
-      console.error(err);
-      if (isEditing) alert(err.message);
+      console.error("Error en saveSong:", err);
+      alert('Error guardando sincronización: ' + err.message);
     } finally {
       setIsSaving(false);
     }

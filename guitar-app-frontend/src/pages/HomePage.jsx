@@ -57,9 +57,11 @@ function HomePage() {
   };
 
   const handleSongUpdated = (updatedSong) => {
-    setSongs(prevSongs =>
-      prevSongs.map(s => (s.id === updatedSong.id ? updatedSong : s))
-    );
+    setSongs(prevSongs => {
+      const newSongs = prevSongs.map(s => (s.id === updatedSong.id ? updatedSong : s));
+      saveToCache('cached_songs', newSongs); // <-- Sincronizar cache maestro
+      return newSongs;
+    });
     setSelectedSong(updatedSong);
   };
 

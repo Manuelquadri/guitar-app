@@ -15,7 +15,7 @@ function SongView({ song, onBack, onSongUpdated }) {
   const [editedContent, setEditedContent] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [speed, setSpeed] = useState(250);
+  const [speed, setSpeed] = useState(''); // Estado vacío o numérico
   const [fontSize, setFontSize] = useState(1);
   const authFetch = useAuthFetch();
   const scrollIntervalRef = useRef(null);
@@ -32,6 +32,7 @@ function SongView({ song, onBack, onSongUpdated }) {
         setLoadedSong(data);
         setEditedContent(data.content);
         setTransposition(data.transposition || 0);
+        setSpeed(data.speed || 250);
         saveToCache(`song_${song.id}`, data); // Caché local para esta canción
       } catch (err) {
         const cached = getFromCache(`song_${song.id}`);
@@ -39,6 +40,7 @@ function SongView({ song, onBack, onSongUpdated }) {
           setLoadedSong(cached);
           setEditedContent(cached.content);
           setTransposition(cached.transposition || 0);
+          setSpeed(cached.speed || 250);
           setOfflineMessage('Modo Offline: Mostrando versión guardada en tu dispositivo.');
           setError(''); // Limpiamos el error fatal
         } else if (song && song.content) {
@@ -46,6 +48,7 @@ function SongView({ song, onBack, onSongUpdated }) {
           setLoadedSong(song);
           setEditedContent(song.content);
           setTransposition(song.transposition || 0);
+          setSpeed(song.speed || 250);
           setOfflineMessage('Modo Offline: Mostrando versión original guardada en caché general.');
           setError('');
         } else {
@@ -70,9 +73,10 @@ function SongView({ song, onBack, onSongUpdated }) {
       document.documentElement.requestFullscreen().catch(err => console.error(err));
     }
 
+    const currentSpeed = speed === '' ? 250 : Number(speed);
     scrollIntervalRef.current = setInterval(() => {
       window.scrollBy(0, 1);
-    }, 501 - speed);
+    }, 501 - currentSpeed);
 
     return () => clearInterval(scrollIntervalRef.current);
   }, [isPlaying, isEditing, speed]);
@@ -113,13 +117,18 @@ function SongView({ song, onBack, onSongUpdated }) {
 
   // --- Handlers (Manejadores de eventos) ---
 
-  const saveSong = async (newContent, newTransposition) => {
+  const saveSong = async (newContent, newTransposition, newSpeed) => {
     if (!loadedSong) return;
     setIsSaving(true);
     try {
+      const payload = { content: newContent, transposition: newTransposition };
+      if (newSpeed !== undefined && newSpeed !== '') {
+        payload.speed = newSpeed;
+      }
+
       const response = await authFetch(`${import.meta.env.VITE_API_URL}/api/songs/${loadedSong.id}`, {
         method: 'PUT',
-        body: JSON.stringify({ content: newContent, transposition: newTransposition }),
+        body: JSON.stringify(payload),
       });
       const updatedSongData = await response.json();
       if (!response.ok) {
@@ -136,19 +145,26 @@ function SongView({ song, onBack, onSongUpdated }) {
     }
   };
 
-  // Efecto para Auto-Guardado de Transposición
+  // Efecto para Auto-Guardado de Transposición y Velocidad
   useEffect(() => {
     if (!loadedSong) return;
-    if (transposition !== (loadedSong.transposition || 0) && !isEditing) {
+
+    const dbTrans = loadedSong.transposition || 0;
+    const dbSpeed = loadedSong.speed || 250;
+    const currentSpeed = speed === '' ? 250 : Number(speed);
+
+    // Chequeamos si alguno de los dos valores difiere de lo que hay en base de datos
+    if ((transposition !== dbTrans || currentSpeed !== dbSpeed) && !isEditing) {
       const timerId = setTimeout(() => {
-        saveSong(loadedSong.content, transposition);
+        saveSong(loadedSong.content, transposition, currentSpeed);
       }, 1000);
       return () => clearTimeout(timerId);
     }
-  }, [transposition, loadedSong, isEditing]);
+  }, [transposition, speed, loadedSong, isEditing]);
 
   const handleSave = async () => {
-    await saveSong(editedContent, transposition);
+    const currentSpeed = speed === '' ? 250 : Number(speed);
+    await saveSong(editedContent, transposition, currentSpeed);
     setIsEditing(false);
   };
 
@@ -211,7 +227,13 @@ function SongView({ song, onBack, onSongUpdated }) {
             <div className="speed-control">
               <button className="play-pause" onClick={() => setIsPlaying(p => !p)}>{isPlaying ? 'Pausa' : '▶ Scroll'}</button>
               <label>Lento</label>
-              <input type="range" min="1" max="500" value={speed} onChange={(e) => setSpeed(Number(e.target.value))} />
+              <input
+                type="range"
+                min="1"
+                max="500"
+                value={speed === '' ? 250 : speed}
+                onChange={(e) => setSpeed(Number(e.target.value))}
+              />
               <label>Rápido</label>
               <input
                 type="number"
@@ -220,10 +242,17 @@ function SongView({ song, onBack, onSongUpdated }) {
                 max="500"
                 value={speed}
                 onChange={(e) => {
-                  let val = Number(e.target.value);
+                  let val = e.target.value;
+                  if (val === '') {
+                    setSpeed('');
+                    return;
+                  }
+                  val = Number(val);
                   if (val > 500) val = 500;
-                  if (val < 1) val = 1;
                   setSpeed(val);
+                }}
+                onBlur={() => {
+                  if (speed === '' || speed < 1) setSpeed(1);
                 }}
               />
             </div>

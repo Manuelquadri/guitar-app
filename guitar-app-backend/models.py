@@ -64,6 +64,7 @@ class UserSong(db.Model):
     # El contenido y la afinación personalizados son opcionales (pueden ser NULL)
     content = db.Column(db.Text, nullable=True)
     transposition = db.Column(db.Integer, nullable=True)
+    speed = db.Column(db.Integer, nullable=True)
 
     def to_dict(self):
         return {
@@ -72,4 +73,5 @@ class UserSong(db.Model):
             "song_id": self.song_id,
             "content": self.content,
             "transposition": self.transposition,
+            "speed": self.speed,
         }

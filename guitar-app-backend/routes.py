@@ -57,6 +57,7 @@ def get_song(song_id):
 
     response_data = song_master.to_dict()
     response_data['transposition'] = 0 
+    response_data['speed'] = 250 
 
     if current_user_id_str:
         current_user_id = int(current_user_id_str) # Convertimos la string a un ENTERO
@@ -64,6 +65,7 @@ def get_song(song_id):
         if user_song:
             response_data['content'] = user_song.content or song_master.content
             response_data['transposition'] = user_song.transposition if user_song.transposition is not None else 0
+            response_data['speed'] = user_song.speed if user_song.speed is not None else 250
 
     return jsonify(response_data)
 
@@ -84,6 +86,7 @@ def update_song(song_id):
 
     if 'content' in data: user_song.content = data['content']
     if 'transposition' in data: user_song.transposition = data['transposition']
+    if 'speed' in data: user_song.speed = data['speed']
     
     db.session.commit()
     return get_song(song_id)

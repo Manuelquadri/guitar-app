@@ -74,9 +74,17 @@ function SongView({ song, onBack, onSongUpdated }) {
     }
 
     const currentSpeed = speed === '' ? 250 : Number(speed);
+
+    // Convertimos de linear (1-500) a exponencial (delay de 1000ms a 10ms)
+    // Formula: y = a * e^(-b*x). Queremos x=1 -> 1000ms, x=500 -> 10ms
+    const baseDelay = 1000;
+    const minDelay = 10;
+    const decayRate = Math.log(baseDelay / minDelay) / 499; // ~0.0092
+    const delay = baseDelay * Math.exp(-decayRate * (currentSpeed - 1));
+
     scrollIntervalRef.current = setInterval(() => {
       window.scrollBy(0, 1);
-    }, 501 - currentSpeed);
+    }, delay);
 
     return () => clearInterval(scrollIntervalRef.current);
   }, [isPlaying, isEditing, speed]);

@@ -8,13 +8,23 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg'],
+      workbox: {
+        navigateFallback: '/index.html',
+        cleanupOutdatedCaches: true,
+        clientsClaim: true,
+        skipWaiting: true,
+      },
       manifest: {
-        name: 'Guitar Hero App',
-        short_name: 'GuitarApp',
-        description: 'Aplicación para descargar y tocar letras con acordes',
-        theme_color: '#242424',
-        background_color: '#242424',
+        name: 'Fogonero · Canciones y acordes',
+        short_name: 'Fogonero',
+        description: 'Tu cancionero con acordes, disponible también sin conexión.',
+        lang: 'es',
+        theme_color: '#131714',
+        background_color: '#131714',
         display: 'standalone',
+        orientation: 'any',
+        start_url: '/',
+        scope: '/',
         icons: [
           {
             src: 'favicon.svg',

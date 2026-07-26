@@ -1,4 +1,3 @@
-// src/components/FilterControls.jsx
 import React from 'react';
 
 function FilterControls({
@@ -8,30 +7,44 @@ function FilterControls({
   selectedArtist,
   setSelectedArtist,
 }) {
-  return (
-    <div className="filter-controls">
-      {/* Input para el buscador */}
-      <input
-        type="text"
-        placeholder="Buscar por título..."
-        value={searchTerm}
-        onChange={(e) => setSearchTerm(e.target.value)}
-        className="search-input"
-      />
+  const clearFilters = () => {
+    setSearchTerm('');
+    setSelectedArtist('');
+  };
 
-      {/* Menú desplegable para el filtro por artista */}
-      <select
-        value={selectedArtist}
-        onChange={(e) => setSelectedArtist(e.target.value)}
-        className="artist-select"
-      >
-        <option value="">Todos los artistas</option>
-        {artists.map((artist) => (
-          <option key={artist} value={artist}>
-            {artist}
-          </option>
-        ))}
-      </select>
+  return (
+    <div className="filter-controls" role="search">
+      <label className="search-field">
+        <span className="sr-only">Buscar por canción o artista</span>
+        <span className="search-icon" aria-hidden="true">⌕</span>
+        <input
+          type="search"
+          placeholder="Buscar canción o artista…"
+          value={searchTerm}
+          onChange={(event) => setSearchTerm(event.target.value)}
+          className="search-input"
+        />
+      </label>
+
+      <label>
+        <span className="sr-only">Filtrar por artista</span>
+        <select
+          value={selectedArtist}
+          onChange={(event) => setSelectedArtist(event.target.value)}
+          className="artist-select"
+        >
+          <option value="">Todos los artistas</option>
+          {artists.map((artist) => (
+            <option key={artist} value={artist}>{artist}</option>
+          ))}
+        </select>
+      </label>
+
+      {(searchTerm || selectedArtist) && (
+        <button className="button button-quiet" type="button" onClick={clearFilters}>
+          Limpiar
+        </button>
+      )}
     </div>
   );
 }

@@ -1,5 +1,11 @@
 // src/context/AuthContext.jsx
-import React, { createContext, useState, useEffect } from 'react';
+import React, {
+  createContext,
+  useCallback,
+  useMemo,
+  useState,
+  useEffect,
+} from 'react';
 
 export const AuthContext = createContext(null);
 
@@ -15,21 +21,21 @@ export const AuthProvider = ({ children }) => {
     }
   }, [token]);
 
-  const login = (newToken) => {
+  const login = useCallback((newToken) => {
     setToken(newToken);
-  };
+  }, []);
 
-  const logout = () => {
+  const logout = useCallback(() => {
     setToken(null);
-  };
+  }, []);
 
   // El valor que compartiremos con toda la app
-  const value = {
+  const value = useMemo(() => ({
     token,
     isLoggedIn: !!token,
     login,
     logout,
-  };
+  }), [login, logout, token]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

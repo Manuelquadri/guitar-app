@@ -1,37 +1,35 @@
-// src/components/AddSongForm.jsx
 import React, { useState } from 'react';
 import { useAuthFetch } from '../hooks/useAuthFetch';
 
-function AddSongForm({ onSongAdded }) {
+function AddSongForm({ onSongAdded, isOnline }) {
   const [url, setUrl] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const authFetch = useAuthFetch();
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError(''); setSuccess('');
-    if (!url) { return; }
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    setError('');
+    setSuccess('');
+    if (!url || !isOnline) return;
     setIsLoading(true);
 
     try {
       const response = await authFetch(`${import.meta.env.VITE_API_URL}/api/scrape`, {
         method: 'POST',
-        body: JSON.stringify({ url: url }),
+        body: JSON.stringify({ url }),
       });
-
       const responseData = await response.json();
       if (!response.ok) {
-        // ¡ESTO ES CLAVE! Ahora mostramos el error del backend.
-        throw new Error(responseData.error || 'Ocurrió un error desconocido.');
+        throw new Error(responseData.error || 'No se pudo añadir la canción.');
       }
-      
+
       onSongAdded(responseData);
-      setSuccess(`¡"${responseData.title}" ha sido añadida!`);
+      setSuccess(`“${responseData.title}” ya está en tu cancionero.`);
       setUrl('');
-    } catch (err) {
-      setError(err.message);
+    } catch (requestError) {
+      setError(requestError.message);
     } finally {
       setIsLoading(false);
     }
@@ -39,13 +37,36 @@ function AddSongForm({ onSongAdded }) {
 
   return (
     <div className="add-song-form">
-      <h3>Añadir nueva canción desde Cifra Club</h3>
+      <p>
+        Pega el enlace de una cifra. Comprobaremos el título, artista y acordes antes
+        de guardarla.
+      </p>
       <form onSubmit={handleSubmit}>
-        <input type="url" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="Pega la URL aquí..." required />
-        <button type="submit" disabled={isLoading}>{isLoading ? 'Añadiendo...' : 'Añadir Canción'}</button>
+        <label className="url-field">
+          <span className="sr-only">URL de Cifra Club</span>
+          <input
+            type="url"
+            value={url}
+            onChange={(event) => setUrl(event.target.value)}
+            placeholder="https://www.cifraclub.com/…"
+            required
+            disabled={isLoading || !isOnline}
+            inputMode="url"
+          />
+        </label>
+        <button
+          className="button button-primary"
+          type="submit"
+          disabled={isLoading || !isOnline}
+        >
+          {isLoading ? 'Importando…' : 'Importar canción'}
+        </button>
       </form>
-      {error && <p className="message error">{error}</p>}
-      {success && <p className="message success">{success}</p>}
+      {!isOnline && (
+        <p className="form-hint">Necesitas conexión para importar nuevas canciones.</p>
+      )}
+      {error && <p className="message error" role="alert">{error}</p>}
+      {success && <p className="message success" role="status">{success}</p>}
     </div>
   );
 }

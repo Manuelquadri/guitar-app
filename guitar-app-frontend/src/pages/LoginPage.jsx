@@ -67,22 +67,30 @@ function LoginPage() {
     <div className="auth-page">
       <h2>Iniciar Sesión</h2>
       <form onSubmit={handleSubmit}>
-        <input
-          type="text"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-          placeholder="Nombre de usuario"
-          required
-          disabled={isLoading} // Deshabilitamos el input mientras carga
-        />
-        <input
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          placeholder="Contraseña"
-          required
-          disabled={isLoading} // Deshabilitamos el input mientras carga
-        />
+        <label>
+          <span className="sr-only">Nombre de usuario</span>
+          <input
+            type="text"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            placeholder="Nombre de usuario"
+            autoComplete="username"
+            required
+            disabled={isLoading}
+          />
+        </label>
+        <label>
+          <span className="sr-only">Contraseña</span>
+          <input
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="Contraseña"
+            autoComplete="current-password"
+            required
+            disabled={isLoading}
+          />
+        </label>
         <button type="submit" disabled={isLoading}>
           {isLoading ? 'Entrando...' : 'Entrar'}
         </button>

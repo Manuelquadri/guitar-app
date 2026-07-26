@@ -1,152 +1,188 @@
-# routes.py
-
 from flask import Blueprint, jsonify, request
-from models import db, User, Song, UserSong
+from flask_jwt_extended import (
+    create_access_token,
+    get_jwt_identity,
+    jwt_required,
+)
+
+from models import Song, User, UserSong, db
 from scraper import scrape_and_save_song
-from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
-from flask import current_app
-import logging
 
-# Creamos el Blueprint. Todas las rutas de la API colgarán de él.
-api_bp = Blueprint('api', __name__, url_prefix='/api')
 
-# --- Rutas de Autenticación ---
+api_bp = Blueprint("api", __name__, url_prefix="/api")
 
-@api_bp.route('/register', methods=['POST'])
+
+@api_bp.route("/register", methods=["POST"])
 def register():
-    data = request.get_json()
-    username, password = data.get('username'), data.get('password')
-    if not all([username, password]):
-        return jsonify({"msg": "Username and password are required"}), 400
+    data = request.get_json(silent=True) or {}
+    username = (data.get("username") or "").strip()
+    password = data.get("password") or ""
+    if not username or not password:
+        return jsonify({"msg": "El usuario y la contraseña son obligatorios."}), 400
+    if len(username) > 80 or len(password) < 8:
+        return jsonify(
+            {
+                "msg": (
+                    "Usa un usuario de hasta 80 caracteres y una contraseña "
+                    "de al menos 8."
+                )
+            }
+        ), 400
     if User.query.filter_by(username=username).first():
-        return jsonify({"msg": "Username already exists"}), 409
-    
+        return jsonify({"msg": "Ese nombre de usuario ya existe."}), 409
+
     new_user = User(username=username)
     new_user.set_password(password)
     db.session.add(new_user)
     db.session.commit()
     return jsonify(new_user.to_dict()), 201
 
-# ¡ESTA ES LA FUNCIÓN QUE PROBABLEMENTE FALTABA O ESTABA INCORRECTA!
-@api_bp.route('/login', methods=['POST'])
+
+@api_bp.route("/login", methods=["POST"])
 def login():
-    data = request.get_json()
-    username, password = data.get('username'), data.get('password')
+    data = request.get_json(silent=True) or {}
+    username = (data.get("username") or "").strip()
+    password = data.get("password") or ""
     user = User.query.filter_by(username=username).first()
     if user and user.check_password(password):
-        access_token = create_access_token(identity=str(user.id))
-        return jsonify(access_token=access_token)
-    return jsonify({"msg": "Bad username or password"}), 401
+        return jsonify(access_token=create_access_token(identity=str(user.id)))
+    return jsonify({"msg": "Usuario o contraseña incorrectos."}), 401
 
 
-# --- Rutas de Canciones ---
-
-@api_bp.route('/songs', methods=['GET'])
+@api_bp.route("/songs", methods=["GET"])
 def get_songs():
-    songs = Song.query.all()
-    return jsonify([song.to_dict() for song in songs])
+    songs = (
+        db.session.query(Song.id, Song.artist, Song.title)
+        .order_by(Song.artist, Song.title)
+        .all()
+    )
+    return jsonify(
+        [
+            {"id": song.id, "artist": song.artist, "title": song.title}
+            for song in songs
+        ]
+    )
 
 
-@api_bp.route('/songs/<int:song_id>', methods=['GET'])
+def _song_for_user(song, user_id=None):
+    response_data = song.to_dict()
+    response_data["transposition"] = 0
+    response_data["speed"] = 250
+
+    if user_id is not None:
+        user_song = UserSong.query.filter_by(
+            user_id=user_id, song_id=song.id
+        ).first()
+        if user_song:
+            response_data["content"] = user_song.content or song.content
+            response_data["transposition"] = (
+                user_song.transposition
+                if user_song.transposition is not None
+                else 0
+            )
+            response_data["speed"] = (
+                user_song.speed if user_song.speed is not None else 250
+            )
+
+    return response_data
+
+
+@api_bp.route("/songs/offline", methods=["GET"])
+@jwt_required()
+def download_songs():
+    current_user_id = int(get_jwt_identity())
+    songs = Song.query.order_by(Song.artist, Song.title).all()
+    user_songs = UserSong.query.filter_by(user_id=current_user_id).all()
+    versions_by_song = {version.song_id: version for version in user_songs}
+    response = []
+
+    for song in songs:
+        song_data = song.to_dict()
+        song_data["transposition"] = 0
+        song_data["speed"] = 250
+        user_song = versions_by_song.get(song.id)
+        if user_song:
+            song_data["content"] = user_song.content or song.content
+            song_data["transposition"] = (
+                user_song.transposition
+                if user_song.transposition is not None
+                else 0
+            )
+            song_data["speed"] = (
+                user_song.speed if user_song.speed is not None else 250
+            )
+        response.append(song_data)
+
+    return jsonify(response)
+
+
+@api_bp.route("/songs/<int:song_id>", methods=["GET"])
 @jwt_required(optional=True)
 def get_song(song_id):
-    current_user_id_str = get_jwt_identity() # Esto nos da una STRING (ej: "1") o None
-    song_master = Song.query.get(song_id)
-    if not song_master:
-        return jsonify({"error": "Song not found"}), 404
+    song = db.session.get(Song, song_id)
+    if not song:
+        return jsonify({"error": "Canción no encontrada."}), 404
 
-    response_data = song_master.to_dict()
-    response_data['transposition'] = 0 
-    response_data['speed'] = 250 
-
-    if current_user_id_str:
-        current_user_id = int(current_user_id_str) # Convertimos la string a un ENTERO
-        user_song = UserSong.query.filter_by(user_id=current_user_id, song_id=song_id).first()
-        if user_song:
-            response_data['content'] = user_song.content or song_master.content
-            response_data['transposition'] = user_song.transposition if user_song.transposition is not None else 0
-            response_data['speed'] = user_song.speed if user_song.speed is not None else 250
-
-    return jsonify(response_data)
+    identity = get_jwt_identity()
+    user_id = int(identity) if identity is not None else None
+    return jsonify(_song_for_user(song, user_id))
 
 
-@api_bp.route('/songs/<int:song_id>', methods=['PUT'])
+@api_bp.route("/songs/<int:song_id>", methods=["PUT"])
 @jwt_required()
 def update_song(song_id):
-    current_user_id_str = get_jwt_identity() # Obtenemos la STRING
-    current_user_id = int(current_user_id_str) # La convertimos a ENTERO
-    if not Song.query.get(song_id):
-        return jsonify({"error": "Song not found"}), 404
-        
-    data = request.get_json()
-    user_song = UserSong.query.filter_by(user_id=current_user_id, song_id=song_id).first()
+    current_user_id = int(get_jwt_identity())
+    song = db.session.get(Song, song_id)
+    if not song:
+        return jsonify({"error": "Canción no encontrada."}), 404
+
+    data = request.get_json(silent=True) or {}
+    allowed_fields = {"content", "transposition", "speed"}
+    if not data or not set(data).issubset(allowed_fields):
+        return jsonify({"error": "No hay cambios válidos para guardar."}), 400
+
+    if "content" in data and not isinstance(data["content"], str):
+        return jsonify({"error": "El contenido debe ser texto."}), 400
+    if "transposition" in data and (
+        not isinstance(data["transposition"], int)
+        or not -48 <= data["transposition"] <= 48
+    ):
+        return jsonify({"error": "La transposición debe estar entre -48 y 48."}), 400
+    if "speed" in data and (
+        not isinstance(data["speed"], (int, float))
+        or not 1 <= data["speed"] <= 500
+    ):
+        return jsonify({"error": "La velocidad debe estar entre 1 y 500."}), 400
+
+    user_song = UserSong.query.filter_by(
+        user_id=current_user_id, song_id=song_id
+    ).first()
     if not user_song:
         user_song = UserSong(user_id=current_user_id, song_id=song_id)
         db.session.add(user_song)
 
-    if 'content' in data: user_song.content = data['content']
-    if 'transposition' in data: user_song.transposition = data['transposition']
-    if 'speed' in data: user_song.speed = data['speed']
-    
+    if "content" in data:
+        user_song.content = data["content"]
+    if "transposition" in data:
+        user_song.transposition = data["transposition"]
+    if "speed" in data:
+        user_song.speed = int(data["speed"])
+
     db.session.commit()
-    return get_song(song_id)
+    return jsonify(_song_for_user(song, current_user_id))
 
 
-@api_bp.route('/scrape', methods=['POST'])
+@api_bp.route("/scrape", methods=["POST"])
 @jwt_required()
 def scrape_song_endpoint():
-    try:
-        data = request.get_json()
-        url = data.get('url')
-        if not url:
-            return jsonify({"error": "La clave 'url' es requerida en el cuerpo JSON."}), 400
-    except Exception:
-        return jsonify({"error": "El cuerpo de la petición debe ser un JSON válido."}), 400
+    data = request.get_json(silent=True) or {}
+    url = data.get("url")
+    if not url:
+        return jsonify({"error": "Pega una URL de Cifra Club."}), 400
 
-    # Llamamos a nuestro scraper a prueba de balas
     success, result = scrape_and_save_song(url, db, Song)
-
     if success:
-        # Éxito: result es el objeto de la canción
         return jsonify(result.to_dict()), 201
-    else:
-        # Fracaso: result es el mensaje de error
-        # Usamos 409 (Conflict) si la canción ya existe, si no 400 (Bad Request)
-        status_code = 409 if "ya existe" in result else 400
-        return jsonify({"error": result}), status_code
-# --- RUTA DE DEPURACIÓN "ECO" ---
-# Añade esta función al final del archivo para nuestra prueba.
-@api_bp.route('/test-post', methods=['POST'])
-@jwt_required()
-def test_post():
-    """
-    Una ruta simple que solo recibe un JSON y lo devuelve.
-    Si esto funciona, sabemos que la autenticación y el envío de JSON son correctos.
-    """
-    logging.basicConfig(level=logging.INFO)
-    logging.info("--- /test-post request received ---")
-    
-    try:
-        data = request.get_json()
-        logging.info(f"Test POST received data: {data}")
-        return jsonify(status="success", received_data=data), 200
-    except Exception as e:
-        logging.error(f"Error in /test-post: {e}")
-        logging.error(f"Raw body in /test-post: {request.data}")
-        return jsonify(error=str(e)), 500
-# --- RUTA DE DEPURACIÓN ---
 
-# Añade esta función al final del archivo
-@api_bp.route('/debug-routes')
-def list_routes():
-    """
-    Una ruta especial para listar todas las rutas conocidas por la aplicación.
-    """
-    import urllib
-    output = []
-    for rule in current_app.url_map.iter_rules():
-        methods = ','.join(rule.methods)
-        line = f"Endpoint: {rule.endpoint}, Methods: {methods}, URL: {urllib.parse.unquote(str(rule))}"
-        output.append(line)
-    
-    return jsonify(sorted(output))
+    status_code = 409 if "ya está en el cancionero" in result else 400
+    return jsonify({"error": result}), status_code

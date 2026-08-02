@@ -31,6 +31,7 @@ const sanitizeSongContent = (content) => {
 function SongView({
   song,
   cacheScope,
+  canSync,
   onBack,
   onSongUpdated,
 }) {
@@ -67,12 +68,16 @@ function SongView({
         setNotice('Canción abierta desde este dispositivo.');
       }
 
-      if (!navigator.onLine) {
+      if (!navigator.onLine || !canSync) {
         if (!cached && initialSong.content) applySong(initialSong);
         if (!cached && !initialSong.content) {
           setError('Esta canción no está descargada en el dispositivo.');
         }
-        setNotice('Modo sin conexión. Los cambios se guardarán para sincronizarlos después.');
+        setNotice(
+          canSync
+            ? 'Modo sin conexión. Los cambios se guardarán para sincronizarlos después.'
+            : 'Biblioteca offline. Los cambios se sincronizarán después de iniciar sesión.'
+        );
         return;
       }
 
@@ -106,7 +111,7 @@ function SongView({
     return () => {
       active = false;
     };
-  }, [applySong, authFetch, cacheScope, song.id]);
+  }, [applySong, authFetch, cacheScope, canSync, song.id]);
 
   useEffect(() => {
     if (!isPlaying || isEditing) {
@@ -138,7 +143,7 @@ function SongView({
     onSongUpdated(optimisticSong);
     await queueSongUpdate(cacheScope, optimisticSong, payload);
 
-    if (!navigator.onLine) {
+    if (!navigator.onLine || !canSync) {
       setNotice('Cambio guardado en el dispositivo. Se sincronizará al volver la conexión.');
       return optimisticSong;
     }
@@ -166,7 +171,7 @@ function SongView({
     } finally {
       setIsSaving(false);
     }
-  }, [authFetch, cacheScope, loadedSong, onSongUpdated]);
+  }, [authFetch, cacheScope, canSync, loadedSong, onSongUpdated]);
 
   useEffect(() => {
     if (!loadedSong || isEditing) return undefined;

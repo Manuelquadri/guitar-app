@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useAuthFetch } from '../hooks/useAuthFetch';
 
-function AddSongForm({ onSongAdded, isOnline }) {
+function AddSongForm({ onSongAdded, canImport, disabledMessage }) {
   const [url, setUrl] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
@@ -12,7 +12,7 @@ function AddSongForm({ onSongAdded, isOnline }) {
     event.preventDefault();
     setError('');
     setSuccess('');
-    if (!url || !isOnline) return;
+    if (!url || !canImport) return;
     setIsLoading(true);
 
     try {
@@ -50,20 +50,20 @@ function AddSongForm({ onSongAdded, isOnline }) {
             onChange={(event) => setUrl(event.target.value)}
             placeholder="https://www.cifraclub.com/…"
             required
-            disabled={isLoading || !isOnline}
+            disabled={isLoading || !canImport}
             inputMode="url"
           />
         </label>
         <button
           className="button button-primary"
           type="submit"
-          disabled={isLoading || !isOnline}
+          disabled={isLoading || !canImport}
         >
           {isLoading ? 'Importando…' : 'Importar canción'}
         </button>
       </form>
-      {!isOnline && (
-        <p className="form-hint">Necesitas conexión para importar nuevas canciones.</p>
+      {!canImport && (
+        <p className="form-hint">{disabledMessage}</p>
       )}
       {error && <p className="message error" role="alert">{error}</p>}
       {success && <p className="message success" role="status">{success}</p>}

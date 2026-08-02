@@ -1,6 +1,7 @@
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import (
     create_access_token,
+    create_refresh_token,
     get_jwt_identity,
     jwt_required,
 )
@@ -45,8 +46,18 @@ def login():
     password = data.get("password") or ""
     user = User.query.filter_by(username=username).first()
     if user and user.check_password(password):
-        return jsonify(access_token=create_access_token(identity=str(user.id)))
+        identity = str(user.id)
+        return jsonify(
+            access_token=create_access_token(identity=identity),
+            refresh_token=create_refresh_token(identity=identity),
+        )
     return jsonify({"msg": "Usuario o contraseña incorrectos."}), 401
+
+
+@api_bp.route("/refresh", methods=["POST"])
+@jwt_required(refresh=True)
+def refresh_session():
+    return jsonify(access_token=create_access_token(identity=get_jwt_identity()))
 
 
 @api_bp.route("/songs", methods=["GET"])

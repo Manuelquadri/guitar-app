@@ -5,6 +5,7 @@ import React, {
   useMemo,
   useState,
 } from 'react';
+import { Link } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import { useAuthFetch } from '../hooks/useAuthFetch';
 import SongList from '../components/SongList';
@@ -12,7 +13,6 @@ import SongView from '../components/SongView';
 import AddSongForm from '../components/AddSongForm';
 import FilterControls from '../components/FilterControls';
 import {
-  getCacheScope,
   getCatalog,
   getLibraryStatus,
   getPendingUpdates,
@@ -22,8 +22,12 @@ import {
 } from '../utils/offlineStore';
 
 function HomePage() {
-  const { token } = useContext(AuthContext);
-  const cacheScope = useMemo(() => getCacheScope(token), [token]);
+  const {
+    token,
+    cacheScope,
+    isOfflineSession,
+    registerOfflineLibrary,
+  } = useContext(AuthContext);
   const authFetch = useAuthFetch();
   const [songs, setSongs] = useState([]);
   const [selectedSong, setSelectedSong] = useState(null);
@@ -45,6 +49,10 @@ function HomePage() {
   }, [cacheScope]);
 
   const fetchSongs = useCallback(async ({ background = false } = {}) => {
+    if (isOfflineSession) {
+      setIsLoading(false);
+      return;
+    }
     if (!background) setIsLoading(true);
 
     try {
@@ -72,10 +80,10 @@ function HomePage() {
     } finally {
       setIsLoading(false);
     }
-  }, [authFetch, cacheScope]);
+  }, [authFetch, cacheScope, isOfflineSession]);
 
   const syncPendingChanges = useCallback(async () => {
-    if (!navigator.onLine) return;
+    if (!navigator.onLine || isOfflineSession) return;
 
     const pending = await getPendingUpdates(cacheScope).catch(() => []);
     for (const update of pending) {
@@ -94,7 +102,7 @@ function HomePage() {
     if (pending.length) {
       setNotice('Tus cambios pendientes ya se sincronizaron.');
     }
-  }, [authFetch, cacheScope]);
+  }, [authFetch, cacheScope, isOfflineSession]);
 
   useEffect(() => {
     let active = true;
@@ -104,9 +112,15 @@ function HomePage() {
       if (active && cached?.songs?.length) {
         setSongs(cached.songs);
         setIsLoading(false);
-        setNotice('Biblioteca local lista. Buscando cambios…');
+        setNotice(
+          isOfflineSession
+            ? 'Biblioteca offline abierta sin iniciar sesión.'
+            : 'Biblioteca local lista. Buscando cambios…'
+        );
       }
-      if (active) await fetchSongs({ background: Boolean(cached?.songs?.length) });
+      if (active && !isOfflineSession) {
+        await fetchSongs({ background: Boolean(cached?.songs?.length) });
+      }
     };
 
     loadCachedThenRefresh();
@@ -115,11 +129,15 @@ function HomePage() {
     return () => {
       active = false;
     };
-  }, [cacheScope, fetchSongs, refreshLibraryStatus]);
+  }, [cacheScope, fetchSongs, isOfflineSession, refreshLibraryStatus]);
 
   useEffect(() => {
     const handleOnline = () => {
       setIsOnline(true);
+      if (isOfflineSession) {
+        setNotice('Hay conexión. Inicia sesión cuando quieras sincronizar tus cambios.');
+        return;
+      }
       setNotice('Conexión recuperada. Sincronizando…');
       syncPendingChanges().then(() => fetchSongs({ background: true }));
     };
@@ -134,7 +152,13 @@ function HomePage() {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
-  }, [fetchSongs, syncPendingChanges]);
+  }, [fetchSongs, isOfflineSession, syncPendingChanges]);
+
+  useEffect(() => {
+    if (token && navigator.onLine) {
+      syncPendingChanges();
+    }
+  }, [syncPendingChanges, token]);
 
   const handleDownloadLibrary = async () => {
     setIsDownloading(true);
@@ -154,6 +178,7 @@ function HomePage() {
       }
 
       await saveLibrary(cacheScope, data);
+      registerOfflineLibrary(cacheScope);
       setSongs(data.map(({ id, title, artist }) => ({ id, title, artist })));
       await refreshLibraryStatus();
       setNotice(`${data.length} canciones quedaron disponibles sin conexión.`);
@@ -209,6 +234,7 @@ function HomePage() {
       <SongView
         song={selectedSong}
         cacheScope={cacheScope}
+        canSync={Boolean(token) && !isOfflineSession}
         onBack={() => setSelectedSong(null)}
         onSongUpdated={handleSongUpdated}
       />
@@ -235,7 +261,13 @@ function HomePage() {
         <div className="offline-card-copy">
           <span className={`connection-dot ${isOnline ? 'is-online' : ''}`} />
           <div>
-            <strong>{isOnline ? 'Con conexión' : 'Modo sin conexión'}</strong>
+            <strong>
+              {isOfflineSession
+                ? 'Biblioteca offline'
+                : isOnline
+                  ? 'Con conexión'
+                  : 'Modo sin conexión'}
+            </strong>
             <p>
               {libraryStatus
                 ? `${libraryStatus.count} canciones descargadas · ${new Date(libraryStatus.downloadedAt).toLocaleDateString('es-AR')}`
@@ -247,7 +279,7 @@ function HomePage() {
           className="button button-primary download-button"
           type="button"
           onClick={handleDownloadLibrary}
-          disabled={isDownloading || !isOnline}
+          disabled={isDownloading || !isOnline || isOfflineSession}
         >
           {isDownloading
             ? 'Descargando…'
@@ -260,9 +292,27 @@ function HomePage() {
       {notice && <div className="status-banner" role="status">{notice}</div>}
       {error && <div className="message error" role="alert">{error}</div>}
 
+      {isOfflineSession && (
+        <div className="offline-session-banner" role="status">
+          <div>
+            <strong>Entraste sin conexión</strong>
+            <span>Puedes tocar y editar lo descargado. Inicia sesión para sincronizar.</span>
+          </div>
+          <Link className="button button-secondary" to="/login">Iniciar sesión</Link>
+        </div>
+      )}
+
       <details className="add-song-panel">
         <summary>Añadir una canción desde Cifra Club</summary>
-        <AddSongForm onSongAdded={handleSongAdded} isOnline={isOnline} />
+        <AddSongForm
+          onSongAdded={handleSongAdded}
+          canImport={isOnline && !isOfflineSession}
+          disabledMessage={
+            isOfflineSession
+              ? 'Inicia sesión para importar nuevas canciones.'
+              : 'Necesitas conexión para importar nuevas canciones.'
+          }
+        />
       </details>
 
       <FilterControls

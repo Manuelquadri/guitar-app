@@ -1,23 +1,35 @@
-// src/hooks/useAuthFetch.js
-import { useContext, useCallback } from 'react';
+import { useCallback, useContext } from 'react';
 import { AuthContext } from '../context/AuthContext';
 
 export const useAuthFetch = () => {
-  const { token, logout } = useContext(AuthContext);
-  const authFetch = useCallback(async (url, options = {}) => {
+  const {
+    token,
+    logout,
+    refreshAccessToken,
+  } = useContext(AuthContext);
+
+  return useCallback(async (url, options = {}) => {
     const headers = { ...options.headers };
     if (options.body && !headers['Content-Type']) {
       headers['Content-Type'] = 'application/json';
     }
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
+    if (token) headers.Authorization = `Bearer ${token}`;
+
+    let response = await fetch(url, { ...options, headers });
+    if (response.status !== 401) return response;
+
+    const renewedToken = await refreshAccessToken();
+    if (renewedToken) {
+      response = await fetch(url, {
+        ...options,
+        headers: { ...headers, Authorization: `Bearer ${renewedToken}` },
+      });
+      if (response.status !== 401) return response;
     }
-    const response = await fetch(url, { ...options, headers });
-    if (response.status === 401) {
-      logout();
-      throw new Error('Sesión expirada. Por favor, inicia sesión de nuevo.');
-    }
-    return response;
-  }, [token, logout]);
-  return authFetch;
+
+    logout();
+    throw new Error(
+      'La sesión online terminó. Puedes seguir usando la biblioteca descargada.'
+    );
+  }, [logout, refreshAccessToken, token]);
 };

@@ -16,7 +16,7 @@ function LoginPage() {
 
   // --- Hooks ---
   // Obtenemos la función 'login' de nuestro contexto de autenticación
-  const { login } = useContext(AuthContext);
+  const { login, offlineAccessAvailable } = useContext(AuthContext);
   // El hook 'useNavigate' nos permite redirigir al usuario a otra página
   const navigate = useNavigate();
 
@@ -49,7 +49,7 @@ function LoginPage() {
       
       // Si todo fue bien, el 'data' contiene el 'access_token'
       // Llamamos a nuestra función 'login' del contexto para guardar el token
-      login(data.access_token);
+      login(data.access_token, data.refresh_token);
       
       // Redirigimos al usuario a la página principal de la aplicación
       navigate('/'); 
@@ -97,6 +97,11 @@ function LoginPage() {
       </form>
       {/* Mostramos el mensaje de error si existe */}
       {error && <p className="message error">{error}</p>}
+      {offlineAccessAvailable && (
+        <Link className="offline-access-link" to="/">
+          Abrir mi biblioteca descargada sin iniciar sesión
+        </Link>
+      )}
       <p>
         ¿No tienes una cuenta? <Link to="/register">Regístrate aquí</Link>
       </p>

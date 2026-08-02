@@ -29,6 +29,7 @@ def create_app():
         "SQLALCHEMY_TRACK_MODIFICATIONS": False,
         "JWT_SECRET_KEY": jwt_secret,
         "JWT_ACCESS_TOKEN_EXPIRES": timedelta(days=30),
+        "JWT_REFRESH_TOKEN_EXPIRES": timedelta(days=365),
     }
     if database_url.startswith("postgresql"):
         database_config["SQLALCHEMY_ENGINE_OPTIONS"] = {

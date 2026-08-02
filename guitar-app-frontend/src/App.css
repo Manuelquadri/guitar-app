@@ -80,6 +80,18 @@
   color: var(--text);
 }
 
+.offline-session-label {
+  padding: 5px 9px;
+  color: var(--accent-strong);
+  background: rgba(244, 163, 64, 0.1);
+  border: 1px solid rgba(244, 163, 64, 0.2);
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
 .button {
   min-height: 42px;
   border: 1px solid transparent;
@@ -231,6 +243,33 @@
 
 .status-banner.compact {
   margin: 0 0 14px;
+}
+
+.offline-session-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin: 18px 0;
+  padding: 16px 18px;
+  background: rgba(244, 163, 64, 0.08);
+  border: 1px solid rgba(244, 163, 64, 0.2);
+  border-radius: 14px;
+}
+
+.offline-session-banner > div {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.offline-session-banner strong {
+  font-size: 0.88rem;
+}
+
+.offline-session-banner span {
+  color: var(--muted);
+  font-size: 0.78rem;
 }
 
 .message.error {
@@ -717,6 +756,20 @@
   text-align: center;
 }
 
+.offline-access-link {
+  display: block;
+  margin-top: 14px;
+  padding: 11px 14px;
+  color: var(--accent-strong);
+  background: rgba(244, 163, 64, 0.08);
+  border: 1px solid rgba(244, 163, 64, 0.18);
+  border-radius: 10px;
+  font-size: 0.8rem;
+  font-weight: 750;
+  text-align: center;
+  text-decoration: none;
+}
+
 @media (max-width: 720px) {
   .container {
     width: min(100% - 24px, 1040px);
@@ -754,6 +807,17 @@
     align-items: stretch;
     flex-direction: column;
     gap: 14px;
+  }
+
+  .offline-session-banner {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .offline-session-banner .button {
+    width: 100%;
+    text-align: center;
+    text-decoration: none;
   }
 
   .download-button {

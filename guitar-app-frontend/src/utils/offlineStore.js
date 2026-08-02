@@ -4,6 +4,7 @@ const CATALOG_STORE = 'catalogs';
 const SONG_STORE = 'songs';
 const META_STORE = 'metadata';
 const QUEUE_STORE = 'syncQueue';
+const LAST_OFFLINE_SCOPE_KEY = 'fogonero:last-offline-scope';
 
 let databasePromise;
 
@@ -171,6 +172,7 @@ export const saveLibrary = async (scope, songs) => {
   });
 
   await transactionDone(transaction);
+  localStorage.setItem(LAST_OFFLINE_SCOPE_KEY, scope);
 
   if (navigator.storage?.persist) {
     await navigator.storage.persist().catch(() => false);
@@ -181,6 +183,35 @@ export const getLibraryStatus = async (scope) => {
   const database = await openDatabase();
   const transaction = database.transaction(META_STORE, 'readonly');
   return requestToPromise(transaction.objectStore(META_STORE).get(scope));
+};
+
+export const getPreferredOfflineScope = async () => {
+  const database = await openDatabase();
+  const preferredScope = localStorage.getItem(LAST_OFFLINE_SCOPE_KEY);
+
+  if (preferredScope) {
+    const transaction = database.transaction(META_STORE, 'readonly');
+    const preferred = await requestToPromise(
+      transaction.objectStore(META_STORE).get(preferredScope)
+    );
+    if (preferred?.count > 0) return preferredScope;
+  }
+
+  const transaction = database.transaction(META_STORE, 'readonly');
+  const libraries = await requestToPromise(
+    transaction.objectStore(META_STORE).getAll()
+  );
+  const latest = libraries
+    .filter((library) => library.count > 0)
+    .sort((first, second) =>
+      second.downloadedAt.localeCompare(first.downloadedAt)
+    )[0];
+
+  if (latest) {
+    localStorage.setItem(LAST_OFFLINE_SCOPE_KEY, latest.scope);
+    return latest.scope;
+  }
+  return null;
 };
 
 export const queueSongUpdate = async (scope, song, payload) => {

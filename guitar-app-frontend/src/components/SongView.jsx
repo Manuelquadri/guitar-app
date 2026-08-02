@@ -392,9 +392,25 @@ function SongView({
       </div>
 
       {isPlaying && (
-        <button className="floating-pause" type="button" onClick={togglePlaying}>
-          Pausar
-        </button>
+        <div className="floating-player" aria-label="Control de autoscroll">
+          <button className="floating-pause" type="button" onClick={togglePlaying}>
+            Pausar
+          </button>
+          <label>
+            <span>{getSpeedLabel(speed)}</span>
+            <input
+              type="range"
+              min="1"
+              max="100"
+              step="1"
+              value={speed}
+              disabled={isSaving}
+              aria-label="Velocidad del desplazamiento durante la reproducción"
+              aria-valuetext={getSpeedLabel(speed)}
+              onChange={(event) => setSpeed(Number(event.target.value))}
+            />
+          </label>
+        </div>
       )}
 
       {isEditing ? (

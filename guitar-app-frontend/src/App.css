@@ -705,20 +705,57 @@
   white-space: pre;
 }
 
-.floating-pause {
+.floating-player {
   position: fixed;
-  right: 22px;
+  left: 50%;
   bottom: max(22px, env(safe-area-inset-bottom));
   z-index: 50;
+  width: min(420px, calc(100% - 28px));
+  min-height: 54px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 7px;
+  background: rgba(27, 33, 29, 0.96);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+  transform: translateX(-50%);
+  backdrop-filter: blur(16px);
+}
+
+.floating-pause {
   min-width: 84px;
-  height: 48px;
+  height: 40px;
   color: var(--text);
   background: #8a493e;
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  border-radius: 24px;
-  box-shadow: var(--shadow);
+  border: 0;
+  border-radius: 10px;
   font-weight: 800;
   cursor: pointer;
+}
+
+.floating-player label {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  flex: 1;
+  gap: 8px;
+  padding-right: 8px;
+}
+
+.floating-player label span {
+  min-width: 54px;
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-align: right;
+}
+
+.floating-player input {
+  min-width: 0;
+  width: 100%;
+  accent-color: var(--accent);
 }
 
 .song-view.playing .player-controls,
@@ -861,26 +898,27 @@
   }
 
   .player-controls {
-    overflow-x: auto;
+    overflow: visible;
     align-items: stretch;
-    scrollbar-width: none;
-  }
-
-  .player-controls::-webkit-scrollbar {
-    display: none;
+    flex-wrap: wrap;
   }
 
   .control-label {
     display: none;
   }
 
-  .control-group,
+  .control-group {
+    flex: 1 1 auto;
+  }
+
   .scroll-control {
-    flex: 0 0 auto;
+    order: -1;
+    width: 100%;
+    flex: 1 0 100%;
   }
 
   .scroll-control label {
-    min-width: 145px;
+    min-width: 0;
   }
 
   .song-sheet {

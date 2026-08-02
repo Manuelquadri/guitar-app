@@ -15,6 +15,29 @@ import {
   saveSong as saveOfflineSong,
 } from '../utils/offlineStore';
 
+const DEFAULT_SCROLL_SPEED = 35;
+
+const normalizeScrollSpeed = (value) => {
+  const numericValue = Number(value);
+  if (!Number.isFinite(numericValue)) return DEFAULT_SCROLL_SPEED;
+
+  const migratedValue = numericValue > 100
+    ? numericValue / 5
+    : numericValue;
+  return Math.round(Math.min(100, Math.max(1, migratedValue)));
+};
+
+const getPixelsPerSecond = (value) =>
+  1.5 + 23.5 * Math.pow(normalizeScrollSpeed(value) / 100, 1.5);
+
+const getSpeedLabel = (value) => {
+  const normalized = normalizeScrollSpeed(value);
+  if (normalized <= 20) return 'Muy lenta';
+  if (normalized <= 45) return 'Lenta';
+  if (normalized <= 70) return 'Media';
+  return 'Rápida';
+};
+
 const sanitizeSongContent = (content) => {
   const documentFragment = new DOMParser().parseFromString(content || '', 'text/html');
   documentFragment.querySelectorAll('script, style, iframe, object').forEach((node) => node.remove());
@@ -43,18 +66,19 @@ function SongView({
   const [editedContent, setEditedContent] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [speed, setSpeed] = useState(250);
+  const [speed, setSpeed] = useState(DEFAULT_SCROLL_SPEED);
   const [fontSize, setFontSize] = useState(1);
   const authFetch = useAuthFetch();
   const animationFrameRef = useRef(null);
   const lastFrameRef = useRef(null);
+  const scrollRemainderRef = useRef(0);
   const initialSongRef = useRef(song);
 
   const applySong = useCallback((nextSong) => {
     setLoadedSong(nextSong);
     setEditedContent(nextSong.content || '');
     setTransposition(nextSong.transposition ?? 0);
-    setSpeed(nextSong.speed ?? 250);
+    setSpeed(normalizeScrollSpeed(nextSong.speed));
   }, []);
 
   useEffect(() => {
@@ -117,14 +141,29 @@ function SongView({
     if (!isPlaying || isEditing) {
       cancelAnimationFrame(animationFrameRef.current);
       lastFrameRef.current = null;
+      scrollRemainderRef.current = 0;
       return undefined;
     }
 
-    const pixelsPerSecond = 2 + Number(speed || 250) * 0.12;
+    const pixelsPerSecond = getPixelsPerSecond(speed);
     const tick = (timestamp) => {
       if (lastFrameRef.current !== null) {
         const elapsed = Math.min(timestamp - lastFrameRef.current, 100);
-        window.scrollBy(0, pixelsPerSecond * elapsed / 1000);
+        const distance =
+          scrollRemainderRef.current + pixelsPerSecond * elapsed / 1000;
+        const wholePixels = Math.floor(distance);
+        scrollRemainderRef.current = distance - wholePixels;
+
+        if (wholePixels > 0) {
+          window.scrollBy(0, wholePixels);
+        }
+
+        const maximumScroll =
+          document.documentElement.scrollHeight - window.innerHeight;
+        if (window.scrollY >= maximumScroll - 1) {
+          setIsPlaying(false);
+          return;
+        }
       }
       lastFrameRef.current = timestamp;
       animationFrameRef.current = requestAnimationFrame(tick);
@@ -176,8 +215,8 @@ function SongView({
   useEffect(() => {
     if (!loadedSong || isEditing) return undefined;
     const storedTransposition = loadedSong.transposition ?? 0;
-    const storedSpeed = loadedSong.speed ?? 250;
-    const currentSpeed = Number(speed || 250);
+    const storedSpeed = normalizeScrollSpeed(loadedSong.speed);
+    const currentSpeed = normalizeScrollSpeed(speed);
 
     if (transposition === storedTransposition && currentSpeed === storedSpeed) {
       return undefined;
@@ -193,7 +232,7 @@ function SongView({
     await persistSong({
       content: editedContent,
       transposition,
-      speed: Number(speed || 250),
+      speed: normalizeScrollSpeed(speed),
     });
     setIsEditing(false);
   };
@@ -203,7 +242,7 @@ function SongView({
     if (loadedSong) {
       setEditedContent(loadedSong.content);
       setTransposition(loadedSong.transposition ?? 0);
-      setSpeed(loadedSong.speed ?? 250);
+      setSpeed(normalizeScrollSpeed(loadedSong.speed));
     }
   };
 
@@ -334,13 +373,16 @@ function SongView({
                 {isPlaying ? 'Pausar' : 'Auto-scroll'}
               </button>
               <label>
-                <span className="sr-only">Velocidad del desplazamiento</span>
+                <span className="scroll-speed-label">{getSpeedLabel(speed)}</span>
                 <input
                   type="range"
                   min="1"
-                  max="500"
+                  max="100"
+                  step="1"
                   value={speed}
                   disabled={isSaving}
+                  aria-label="Velocidad del desplazamiento"
+                  aria-valuetext={getSpeedLabel(speed)}
                   onChange={(event) => setSpeed(Number(event.target.value))}
                 />
               </label>

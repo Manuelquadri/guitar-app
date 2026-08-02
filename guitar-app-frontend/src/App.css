@@ -619,10 +619,20 @@
 }
 
 .scroll-control label {
-  min-width: 90px;
+  min-width: 160px;
   display: flex;
+  align-items: center;
   flex: 1;
+  gap: 8px;
   padding-right: 8px;
+}
+
+.scroll-speed-label {
+  min-width: 55px;
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-align: right;
 }
 
 .scroll-control input {
@@ -870,7 +880,7 @@
   }
 
   .scroll-control label {
-    min-width: 100px;
+    min-width: 145px;
   }
 
   .song-sheet {
